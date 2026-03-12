@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Utilify 
 // @namespace    author @ simonvs (UID: 970332627221504081)
-// @version      3.0.6
+// @version      3.1.0
 // @description  (Almost) personal userscript inspired by KoGaMaBuddy containing various utilities and visual enhancements. 
 // @author       Simon
 // @match        *://www.kogama.com/*
@@ -4991,7 +4991,6 @@ function removeTooltip() {
   }
 })();
 
-
 // Faster Friends 
 
 (function () {
@@ -5020,6 +5019,12 @@ function removeTooltip() {
     function getCurrentUser() {
         const b = getBootstrap();
         return b?.current_user || null;
+    }
+
+    function getCsrfToken() {
+        // KoGaMa sets the CSRF token as a cookie named "csrftoken"
+        const match = document.cookie.match(/(?:^|;\s*)csrftoken=([^;]+)/);
+        return match ? decodeURIComponent(match[1]) : "";
     }
 
     function isOwnProfile(viewedID, currentUser) {
@@ -5339,6 +5344,38 @@ function removeTooltip() {
   font-size: 13px;
   padding: 10px 5px;
   font-style: italic;
+}
+
+/* ── Invite action buttons ── */
+.entry-actions {
+  display: none;
+  align-items: center;
+  gap: 4px;
+  margin-left: 2px;
+}
+
+.entry:hover .entry-actions {
+  display: inline-flex;
+}
+
+.btn-reject {
+  background: rgba(220, 80, 80, 0.12);
+  color: #e08080;
+  border: 1px solid rgba(220, 80, 80, 0.3);
+}
+
+.btn-reject:hover {
+  background: rgba(220, 80, 80, 0.25);
+  border-color: rgba(220, 80, 80, 0.55);
+  transform: translateY(-1px);
+  box-shadow: 0 3px 8px rgba(220, 80, 80, 0.2);
+}
+
+.btn-reject:disabled {
+  opacity: 0.4;
+  cursor: default;
+  transform: none;
+  box-shadow: none;
 }
 
 #frlscrape-reopen {
@@ -5676,6 +5713,71 @@ function removeTooltip() {
             return wrapper;
         }
 
+        function createInviteEntryLink(text, href, rawRecord, selfID) {
+            const requestID = rawRecord.id;
+
+            const wrapper = document.createElement("span");
+            wrapper.className = "entry";
+            wrapper.dataset.requestId = requestID;
+
+            const a = document.createElement("a");
+            a.href = href;
+            a.target = "_blank";
+            a.rel = "noopener noreferrer";
+            a.textContent = text;
+
+            const actions = document.createElement("span");
+            actions.className = "entry-actions";
+
+            const rejectBtn = document.createElement("button");
+            rejectBtn.className = "btn-reject";
+            rejectBtn.title = "Reject request";
+            rejectBtn.textContent = "✕";
+
+            rejectBtn.addEventListener("click", async (e) => {
+                e.preventDefault();
+                rejectBtn.disabled = true;
+                const url = `https://www.kogama.com/user/${selfID}/friend/${requestID}/`;
+                try {
+                    const res = await fetch(url, {
+                        method: "DELETE",
+                        credentials: "include",
+                        mode: "cors",
+                        headers: {
+                            "Accept": "application/json, text/plain, */*",
+                            "Content-Type": "application/json",
+                            "X-Csrf-Token": getCsrfToken()
+                        }
+                    });
+                    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+                    wrapper.style.transition = "opacity 0.3s ease, transform 0.3s ease";
+                    wrapper.style.opacity = "0";
+                    wrapper.style.transform = "scale(0.85)";
+                    setTimeout(() => {
+                        const section = wrapper.closest(".frsection");
+                        wrapper.remove();
+                        if (section) updateSeparators(section);
+                    }, 300);
+                } catch (err) {
+                    console.error("Faster Friends: DELETE request failed", err);
+                    rejectBtn.disabled = false;
+                    wrapper.style.outline = "1px solid rgba(220,80,80,0.6)";
+                    setTimeout(() => { wrapper.style.outline = ""; }, 1200);
+                }
+            });
+
+            actions.appendChild(rejectBtn);
+
+            const sep = document.createElement("span");
+            sep.className = "separator";
+            sep.textContent = ",";
+
+            wrapper.appendChild(a);
+            wrapper.appendChild(actions);
+            wrapper.appendChild(sep);
+            return wrapper;
+        }
+
         function updateSeparators(sectionEl) {
             if (!sectionEl) return;
             const entries = Array.from(sectionEl.querySelectorAll(".entry"));
@@ -5714,7 +5816,7 @@ function removeTooltip() {
             }
         }
 
-        function appendSortedEntries(container, items) {
+        function appendSortedEntries(container, items, isInviting = false) {
             if (!container) return;
             container.querySelectorAll(".entry, .empty-note").forEach(n => n.remove());
             const mapped = items.slice();
@@ -5729,7 +5831,17 @@ function removeTooltip() {
             }
             
             mapped.forEach((it) => {
-                const el = createEntryLink(it.name, it.href, it.id);
+                let el;
+                if (isInviting) {
+                    el = createInviteEntryLink(
+                        it.name,
+                        it.href,
+                        it.rawRecord,
+                        viewedProfileID
+                    );
+                } else {
+                    el = createEntryLink(it.name, it.href, it.id);
+                }
                 container.appendChild(el);
             });
             updateSeparators(container);
@@ -5768,7 +5880,7 @@ function removeTooltip() {
                     .map(r => ({ 
                         name: r.friend_username || `id:${r.friend_profile_id}`, 
                         href: `https://www.kogama.com/profile/${r.friend_profile_id}/`, 
-                        id: r.id 
+                        id: r.id
                     }));
                 
                 const inviting = arr
@@ -5776,11 +5888,12 @@ function removeTooltip() {
                     .map(r => ({ 
                         name: r.profile_username || `id:${r.profile_id}`, 
                         href: `https://www.kogama.com/profile/${r.profile_id}/`, 
-                        id: r.id 
+                        id: r.id,
+                        rawRecord: r
                     }));
                 
-                appendSortedEntries(ui.sentSection, sent);
-                appendSortedEntries(ui.invitingSection, inviting);
+                appendSortedEntries(ui.sentSection, sent, false);
+                appendSortedEntries(ui.invitingSection, inviting, true);  // <-- inviting mode
             } catch (err) {
                 const note = document.createElement("div");
                 note.className = "empty-note";
@@ -5842,7 +5955,7 @@ function removeTooltip() {
 
         const ui = buildUI(isOwn);
 
-         console.log('Faster Friends: Initialized', {
+        console.log('Faster Friends: Initialized', {
             viewedProfile: viewedProfileID,
             currentUser: currentUser.id,
             isOwnProfile: isOwn
@@ -5860,7 +5973,6 @@ function removeTooltip() {
     waitBootstrapStart(run);
 
 })();
-
 // Avatar Marketplace Finder
 (function () {
 	"use strict"
@@ -7128,5 +7240,709 @@ bootstrap();
   }
 
   document.addEventListener('paste', onPaste, true);
+
+})();
+
+(function () {
+    'use strict';
+
+    const LOG = '[KoGaMa FriendBtn]';
+
+    const hostname = window.location.hostname;
+    const pathname = window.location.pathname;
+
+    if (hostname !== 'www.kogama.com') {
+        return;
+    }
+    if (!/^\/profile\/\d+\/$/.test(pathname)) {
+        return;
+    }
+
+    function getBootstrap() {
+        const scripts = document.querySelectorAll('script');
+
+        for (const script of scripts) {
+            const src = script.textContent || script.innerText;
+            if (!src.includes('options.bootstrap')) continue;
+
+            const bsMatch = src.match(/options\.bootstrap\s*=\s*(\{[\s\S]+?\});\s*options\.breadcrumb/);
+            if (bsMatch) {
+                try {
+                    const parsed = JSON.parse(bsMatch[1]);
+                    return parsed;
+                } catch (e) {
+                }
+            }
+        }
+
+        return null;
+    }
+
+    function injectButton(bootstrap) {
+        const profileUser = bootstrap.object;
+        const currentUser = bootstrap.current_user;
+
+        if (!profileUser || !currentUser) {
+            return;
+        }
+
+        const selfId       = currentUser.id;
+        const profileId    = profileUser.id;
+        const isMe         = profileUser.is_me === true;
+        const isFriend     = bootstrap.is_friend === true;
+
+        if (isMe) {
+            return;
+        }
+        if (isFriend) {
+            return;
+        }
+
+        const style = document.createElement('style');
+        style.textContent = `
+            .kgm-friend-btn {
+                transition: background-color 0.2s, opacity 0.2s;
+            }
+            .kgm-friend-btn.kgm-sent {
+                opacity: 0.75;
+            }
+            .kgm-friend-btn.kgm-sent:hover {
+                opacity: 1;
+            }
+        `;
+        document.head.appendChild(style);
+
+        let requestSent = false;
+
+        const wrapper = document.createElement('div');
+        wrapper.innerHTML = `
+            <button class="MuiButtonBase-root MuiButton-root MuiButton-contained MuiButton-containedDark MuiButton-sizeSmall MuiButton-containedSizeSmall MuiButton-colorDark css-yrsbmg kgm-friend-btn" tabindex="0" type="button">
+                <span class="MuiButton-icon MuiButton-startIcon MuiButton-iconSizeSmall css-1qfx30c">
+                    <svg stroke="currentColor" fill="currentColor" stroke-width="0" viewBox="0 0 640 512" height="1em" width="1em" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M624 208h-64v-64c0-8.8-7.2-16-16-16h-32c-8.8 0-16 7.2-16 16v64h-64c-8.8 0-16 7.2-16 16v32c0 8.8 7.2 16 16 16h64v64c0 8.8 7.2 16 16 16h32c8.8 0 16-7.2 16-16v-64h64c8.8 0 16-7.2 16-16v-32c0-8.8-7.2-16-16-16zm-400 48c70.7 0 128-57.3 128-128S294.7 0 224 0 96 57.3 96 128s57.3 128 128 128zm89.6 32h-16.7c-22.2 10.2-46.9 16-72.9 16s-50.6-5.8-72.9-16h-16.7C60.2 288 0 348.2 0 422.4V464c0 26.5 21.5 48 48 48h352c26.5 0 48-21.5 48-48v-41.6c0-74.2-60.2-134.4-134.4-134.4z"/>
+                    </svg>
+                </span>
+                <span class="kgm-friend-btn-label">Add Friend</span>
+            </button>
+        `;
+
+        const btn = wrapper.querySelector('button');
+
+        btn.addEventListener('click', async () => {
+            btn.disabled = true;
+
+            if (!requestSent) {
+                try {
+                    const res = await fetch(`https://www.kogama.com/user/${selfId}/friend/`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        credentials: 'include',
+                        body: JSON.stringify({ user_id: profileId })
+                    });
+
+                    if (res.ok) {
+                        requestSent = true;
+                        btn.classList.add('kgm-sent');
+                        btn.querySelector('.kgm-friend-btn-label').textContent = 'Request Sent';
+                        btn.title = 'Click to cancel friend request';
+                    }
+                } catch (e) {
+                }
+
+            } else {
+                try {
+                    const res = await fetch(`https://www.kogama.com/user/${selfId}/friend/`, {
+                        method: 'DELETE',
+                        headers: { 'Content-Type': 'application/json' },
+                        credentials: 'include',
+                        body: JSON.stringify({ user_id: profileId })
+                    });
+
+                    if (res.ok) {
+                        requestSent = false;
+                        btn.classList.remove('kgm-sent');
+                        btn.querySelector('.kgm-friend-btn-label').textContent = 'Add Friend';
+                        btn.title = '';
+                    }
+                } catch (e) {
+                }
+            }
+
+            btn.disabled = false;
+        });
+
+        const INITIAL_DELAY_MS = 2000;
+
+        function tryInject() {
+            const container = document.querySelector('._1Noq6');
+            if (!container) {
+                return false;
+            }
+            if (container.querySelector('.kgm-friend-btn')) {
+                return true;
+            }
+
+            const refNode = container.children[1] || null;
+            container.insertBefore(wrapper, refNode);
+            return true;
+        }
+
+        setTimeout(() => {
+            if (!tryInject()) {
+                const observer = new MutationObserver(() => {
+                    if (tryInject()) {
+                        observer.disconnect();
+                    }
+                });
+                observer.observe(document.body, { childList: true, subtree: true });
+            }
+        }, INITIAL_DELAY_MS);
+    }
+
+    function init() {
+        const bootstrap = getBootstrap();
+        if (!bootstrap) {
+            return;
+        }
+        injectButton(bootstrap);
+    }
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', init);
+    } else {
+        init();
+    }
+
+})();
+
+// ==UserScript==
+// @name         KoGaMa Profile Bookmarks
+// @namespace    https://www.kogama.com/
+// @version      4.0.0
+// @description  Bookmark profiles, quick-access from the friends bar
+// @author       Lappy
+// @match        *://www.kogama.com/*
+// @grant        none
+// @run-at       document-idle
+// ==/UserScript==
+
+(function () {
+  'use strict';
+
+  const PROFILE_RE = /^\/profile\/(\d+)\/?/;
+  const STORAGE_KEY = 'kogama_bookmarks';
+  const PINS_KEY = 'kogama_bookmark_pins';
+
+  function getProfileUID() {
+    const m = location.pathname.match(PROFILE_RE);
+    return m ? m[1] : null;
+  }
+
+  function isProfilePage() {
+    return !!getProfileUID();
+  }
+
+  function getBootstrapObject() {
+    try {
+      const scripts = document.querySelectorAll('script');
+      for (const s of scripts) {
+        const t = s.textContent;
+        if (t && t.includes('"is_me"')) {
+          const m = t.match(/"object"\s*:\s*(\{[\s\S]*?"object_type_id"\s*:\s*\d+\s*\})/);
+          if (m) {
+            try { return JSON.parse(m[1]); } catch {}
+          }
+        }
+      }
+    } catch {}
+    try {
+      return window.App && window.App.options && window.App.options.bootstrap && window.App.options.bootstrap.object;
+    } catch {}
+    return null;
+  }
+
+  function isViewingOwnProfile() {
+    const obj = getBootstrapObject();
+    if (!obj) return false;
+    return obj.is_me === true;
+  }
+
+  function getBookmarks() {
+    try {
+      return JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
+    } catch {
+      return [];
+    }
+  }
+
+  function saveBookmarks(list) {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(list));
+  }
+
+  function getPins() {
+    try {
+      const stored = JSON.parse(localStorage.getItem(PINS_KEY) || '[]');
+      return Array.isArray(stored) ? stored : [];
+    } catch {
+      return [];
+    }
+  }
+
+  function savePins(list) {
+    localStorage.setItem(PINS_KEY, JSON.stringify(list.slice(0, 2)));
+  }
+
+  function isBookmarked(uid) {
+    return getBookmarks().some(b => b.uid === uid);
+  }
+
+  function toggleBookmark(uid, nickname) {
+    let list = getBookmarks();
+    const idx = list.findIndex(b => b.uid === uid);
+    if (idx !== -1) {
+      list.splice(idx, 1);
+      saveBookmarks(list);
+      savePins(getPins().filter(p => p !== uid));
+      return false;
+    }
+    list.unshift({ uid, nickname, url: `https://www.kogama.com/profile/${uid}/` });
+    if (list.length > 50) list = list.slice(0, 50);
+    saveBookmarks(list);
+    return true;
+  }
+
+  function injectStyles() {
+    if (document.getElementById('kg-bm-styles')) return;
+    const s = document.createElement('style');
+    s.id = 'kg-bm-styles';
+    s.textContent = `
+      .kg-bm-btn.kg-bm-active svg {
+        fill: #f5c518 !important;
+        stroke: #f5c518 !important;
+      }
+
+      #kg-bm-bar {
+        border-top: 1px solid rgba(255,255,255,0.07);
+        margin-top: 8px;
+        padding: 10px 16px 12px;
+      }
+
+      #kg-bm-bar-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 8px;
+      }
+
+      #kg-bm-bar-title {
+        font-size: 11px;
+        font-weight: 700;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        color: rgba(255,255,255,0.35);
+      }
+
+      #kg-bm-manage-btn {
+        background: none;
+        border: none;
+        cursor: pointer;
+        font-size: 11px;
+        color: rgba(255,255,255,0.25);
+        padding: 0;
+        transition: color 130ms ease;
+      }
+
+      #kg-bm-manage-btn:hover {
+        color: rgba(255,255,255,0.6);
+      }
+
+      #kg-bm-pins {
+        display: flex;
+        gap: 6px;
+        flex-wrap: wrap;
+        margin-bottom: 4px;
+      }
+
+      .kg-bm-pin {
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        background: rgba(255,255,255,0.07);
+        border: 1px solid rgba(255,255,255,0.1);
+        border-radius: 6px;
+        padding: 4px 10px;
+        font-size: 12px;
+        font-weight: 500;
+        color: rgba(255,255,255,0.8);
+        cursor: pointer;
+        transition: background 130ms ease, color 130ms ease;
+        user-select: none;
+        max-width: 160px;
+      }
+
+      .kg-bm-pin:hover {
+        background: rgba(255,255,255,0.13);
+        color: #fff;
+      }
+
+      .kg-bm-pin-icon {
+        font-size: 10px;
+        color: #f5c518;
+        flex-shrink: 0;
+      }
+
+      .kg-bm-pin-nick {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      #kg-bm-no-pins {
+        font-size: 12px;
+        color: rgba(255,255,255,0.2);
+        font-style: italic;
+      }
+
+      #kg-bm-list-wrap {
+        display: none;
+        margin-top: 10px;
+        max-height: 220px;
+        overflow-y: auto;
+        border-radius: 8px;
+        background: rgba(0,0,0,0.25);
+        border: 1px solid rgba(255,255,255,0.08);
+      }
+
+      #kg-bm-list-wrap.kg-bm-open {
+        display: block;
+      }
+
+      #kg-bm-list-wrap::-webkit-scrollbar { width: 4px; }
+      #kg-bm-list-wrap::-webkit-scrollbar-track { background: transparent; }
+      #kg-bm-list-wrap::-webkit-scrollbar-thumb {
+        background: rgba(255,255,255,0.12);
+        border-radius: 4px;
+      }
+
+      .kg-bm-row {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 7px 12px;
+        cursor: pointer;
+        transition: background 120ms ease;
+        border-bottom: 1px solid rgba(255,255,255,0.04);
+      }
+
+      .kg-bm-row:last-child { border-bottom: none; }
+
+      .kg-bm-row:hover { background: rgba(255,255,255,0.06); }
+
+      .kg-bm-row-nick {
+        flex: 1;
+        font-size: 12px;
+        font-weight: 500;
+        color: #fff;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      .kg-bm-row-uid {
+        font-size: 10px;
+        color: rgba(255,255,255,0.25);
+        flex-shrink: 0;
+      }
+
+      .kg-bm-row-pin {
+        background: none;
+        border: none;
+        cursor: pointer;
+        font-size: 13px;
+        padding: 0 2px;
+        line-height: 1;
+        flex-shrink: 0;
+        opacity: 0.3;
+        transition: opacity 130ms ease;
+        color: inherit;
+      }
+
+      .kg-bm-row-pin:hover { opacity: 1; }
+
+      .kg-bm-row-pin.kg-bm-pinned {
+        opacity: 1;
+        color: #f5c518;
+      }
+
+      .kg-bm-row-remove {
+        background: none;
+        border: none;
+        cursor: pointer;
+        color: rgba(255,255,255,0.2);
+        font-size: 15px;
+        padding: 0;
+        line-height: 1;
+        flex-shrink: 0;
+        transition: color 130ms ease;
+      }
+
+      .kg-bm-row-remove:hover { color: #ff5555; }
+
+      #kg-bm-empty {
+        padding: 16px 12px;
+        font-size: 12px;
+        color: rgba(255,255,255,0.25);
+        text-align: center;
+      }
+    `;
+    document.head.appendChild(s);
+  }
+
+  function renderBar() {
+    const pinsEl = document.getElementById('kg-bm-pins');
+    const listWrap = document.getElementById('kg-bm-list-wrap');
+    if (!pinsEl || !listWrap) return;
+
+    const bookmarks = getBookmarks();
+    const pins = getPins();
+
+    pinsEl.innerHTML = '';
+    if (pins.length === 0) {
+      const empty = document.createElement('span');
+      empty.id = 'kg-bm-no-pins';
+      empty.textContent = 'No pins! Click ★ in the list to pin (max 2)';
+      pinsEl.appendChild(empty);
+    } else {
+      pins.forEach(uid => {
+        const b = bookmarks.find(x => x.uid === uid);
+        if (!b) return;
+        const pin = document.createElement('span');
+        pin.className = 'kg-bm-pin';
+        pin.title = `#${b.uid}`;
+
+        const icon = document.createElement('span');
+        icon.className = 'kg-bm-pin-icon';
+        icon.textContent = '★';
+
+        const nick = document.createElement('span');
+        nick.className = 'kg-bm-pin-nick';
+        nick.textContent = b.nickname;
+
+        pin.appendChild(icon);
+        pin.appendChild(nick);
+        pin.addEventListener('click', () => { window.location.href = b.url; });
+        pinsEl.appendChild(pin);
+      });
+    }
+
+    listWrap.innerHTML = '';
+    if (bookmarks.length === 0) {
+      const empty = document.createElement('div');
+      empty.id = 'kg-bm-empty';
+      empty.textContent = 'No bookmarks yet.';
+      listWrap.appendChild(empty);
+      return;
+    }
+
+    bookmarks.forEach(b => {
+      const row = document.createElement('div');
+      row.className = 'kg-bm-row';
+
+      const nick = document.createElement('span');
+      nick.className = 'kg-bm-row-nick';
+      nick.textContent = b.nickname;
+      nick.title = b.nickname;
+
+      const uidSpan = document.createElement('span');
+      uidSpan.className = 'kg-bm-row-uid';
+      uidSpan.textContent = `#${b.uid}`;
+
+      const pinBtn = document.createElement('button');
+      pinBtn.className = 'kg-bm-row-pin' + (pins.includes(b.uid) ? ' kg-bm-pinned' : '');
+      pinBtn.type = 'button';
+      pinBtn.title = pins.includes(b.uid) ? 'Unpin' : 'Pin to top';
+      pinBtn.textContent = '★';
+      pinBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        let currentPins = getPins();
+        const alreadyPinned = currentPins.includes(b.uid);
+        if (alreadyPinned) {
+          currentPins = currentPins.filter(p => p !== b.uid);
+        } else {
+          if (currentPins.length >= 2) return;
+          currentPins.push(b.uid);
+        }
+        savePins(currentPins);
+        renderBar();
+      });
+
+      const removeBtn = document.createElement('button');
+      removeBtn.className = 'kg-bm-row-remove';
+      removeBtn.type = 'button';
+      removeBtn.title = 'Remove';
+      removeBtn.textContent = '×';
+      removeBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        toggleBookmark(b.uid, b.nickname);
+        renderBar();
+        syncProfileBtn();
+      });
+
+      row.addEventListener('click', () => { window.location.href = b.url; });
+      row.appendChild(nick);
+      row.appendChild(uidSpan);
+      row.appendChild(pinBtn);
+      row.appendChild(removeBtn);
+      listWrap.appendChild(row);
+    });
+  }
+
+  function injectBar(container) {
+    if (document.getElementById('kg-bm-bar')) return;
+
+    const bar = document.createElement('div');
+    bar.id = 'kg-bm-bar';
+
+    const header = document.createElement('div');
+    header.id = 'kg-bm-bar-header';
+
+    const title = document.createElement('span');
+    title.id = 'kg-bm-bar-title';
+    title.textContent = 'Bookmarks';
+
+    const manageBtn = document.createElement('button');
+    manageBtn.id = 'kg-bm-manage-btn';
+    manageBtn.type = 'button';
+    manageBtn.textContent = 'manage ▾';
+
+    header.appendChild(title);
+    header.appendChild(manageBtn);
+
+    const pins = document.createElement('div');
+    pins.id = 'kg-bm-pins';
+
+    const listWrap = document.createElement('div');
+    listWrap.id = 'kg-bm-list-wrap';
+
+    let open = false;
+    manageBtn.addEventListener('click', () => {
+      open = !open;
+      listWrap.classList.toggle('kg-bm-open', open);
+      manageBtn.textContent = open ? 'manage ▴' : 'manage ▾';
+    });
+
+    bar.appendChild(header);
+    bar.appendChild(pins);
+    bar.appendChild(listWrap);
+    container.appendChild(bar);
+
+    renderBar();
+  }
+
+  function syncProfileBtn() {
+    const uid = getProfileUID();
+    if (!uid) return;
+    const btn = document.querySelector('.kg-bm-btn');
+    if (!btn) return;
+    const bookmarked = isBookmarked(uid);
+    btn.classList.toggle('kg-bm-active', bookmarked);
+    const last = btn.childNodes[btn.childNodes.length - 1];
+    if (last && last.nodeType === 3) last.textContent = bookmarked ? 'Bookmarked' : 'Bookmark';
+  }
+
+  function buildBookmarkButton(uid, nickname) {
+    const refBtn = document.querySelector('._1Noq6 button');
+    const btnClass = refBtn ? refBtn.className
+      : 'MuiButtonBase-root MuiButton-root MuiButton-contained MuiButton-containedDark MuiButton-sizeSmall MuiButton-containedSizeSmall MuiButton-colorDark css-yrsbmg';
+
+    const bookmarked = isBookmarked(uid);
+    const wrapper = document.createElement('div');
+    wrapper.id = 'kg-bm-profile-btn';
+
+    const btn = document.createElement('button');
+    btn.className = btnClass + ' kg-bm-btn' + (bookmarked ? ' kg-bm-active' : '');
+    btn.tabIndex = 0;
+    btn.type = 'button';
+    btn.innerHTML = `<span class="MuiButton-icon MuiButton-startIcon MuiButton-iconSizeSmall css-1qfx30c"><svg stroke="currentColor" fill="currentColor" stroke-width="0" viewBox="0 0 384 512" height="1em" width="1em" xmlns="http://www.w3.org/2000/svg"><path d="M0 48C0 21.5 21.5 0 48 0l0 48V441.4l130.1-92.9c8.3-5.9 19.6-5.9 27.9 0L336 441.4V48H48V0H336c26.5 0 48 21.5 48 48V488c0 9.2-5 17.6-13 21.9s-17.6 4.4-24.9-.7L192 397.5 37.9 509.2c-7.3 5.1-16.9 5.6-24.9.7S0 497.2 0 488V48z"/></svg></span>${bookmarked ? 'Bookmarked' : 'Bookmark'}`;
+
+    btn.addEventListener('click', () => {
+      const nowBookmarked = toggleBookmark(uid, nickname);
+      btn.classList.toggle('kg-bm-active', nowBookmarked);
+      const last = btn.childNodes[btn.childNodes.length - 1];
+      if (last && last.nodeType === 3) last.textContent = nowBookmarked ? 'Bookmarked' : 'Bookmark';
+      renderBar();
+    });
+
+    wrapper.appendChild(btn);
+    return wrapper;
+  }
+
+  function injectBookmarkButton() {
+    if (document.getElementById('kg-bm-profile-btn')) return;
+    const uid = getProfileUID();
+    if (!uid) return;
+    const container = document.querySelector('._1Noq6');
+    const h1 = document.querySelector('h1');
+    if (!container || !h1) return;
+    const nickname = h1.textContent.trim();
+    container.insertBefore(buildBookmarkButton(uid, nickname), container.firstChild);
+  }
+
+  let profileBtnDone = false;
+  let barDone = false;
+
+  function tryInjectAll() {
+    injectStyles();
+
+    if (!barDone) {
+      const friendsBar = document.querySelector('._2E1AL');
+      if (friendsBar) {
+        injectBar(friendsBar);
+        barDone = true;
+      }
+    }
+
+    if (isProfilePage() && !profileBtnDone) {
+      const obj = getBootstrapObject();
+      if (!obj) return;
+
+      if (obj.is_me === true) {
+        profileBtnDone = true;
+        return;
+      }
+
+      const container = document.querySelector('._1Noq6');
+      const h1 = document.querySelector('h1');
+      if (container && h1) {
+        injectBookmarkButton();
+        profileBtnDone = true;
+      }
+    }
+  }
+
+  const observer = new MutationObserver(tryInjectAll);
+
+  function start() {
+    if (document.body) {
+      observer.observe(document.body, { childList: true, subtree: true });
+      tryInjectAll();
+    } else {
+      document.addEventListener('DOMContentLoaded', () => {
+        observer.observe(document.body, { childList: true, subtree: true });
+        tryInjectAll();
+      });
+    }
+  }
+
+  let lastPath = location.pathname;
+  setInterval(() => {
+    if (location.pathname !== lastPath) {
+      lastPath = location.pathname;
+      profileBtnDone = false;
+      tryInjectAll();
+    }
+  }, 500);
+
+  start();
 
 })();
