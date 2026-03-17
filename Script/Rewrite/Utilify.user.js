@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Utilify 
 // @namespace    author @ simonvs (UID: 970332627221504081)
-// @version      3.1.0
+// @version      3.2.0
 // @description  (Almost) personal userscript inspired by KoGaMaBuddy containing various utilities and visual enhancements. 
 // @author       Simon
 // @match        *://www.kogama.com/*
@@ -26,7 +26,7 @@
         ._13UrL ._23KvS ._1z4jM ._1aUa_ { max-height: 130px !important; max-width: 600px !important; } /* bio fix */
         ._13UrL ._23KvS ._25Vmr ._2IqY6 ._2O_AH { margin-top: 13px !important; } /* rank etc, fix the gap */
         ._1q4mD ._1sUGu ._1u05O { background-color: transparent !important; } /* navbar fix */
-        .css-1hitfzb, .css-1q1eu9e { color: #4adeb7 !important; } /* Feed & comment author usernames + some button text idk*/
+        .zUJzi ._2BvOT ._375XK textarea { background-color: transparent !important; color: white !important; }
         .css-1995t1d, .css-e5yc1l { background-color: transparent !important; } /* kill the annoying orange badges */
         ._2hUvr ._1T9vj, ._3-qgq ._2uIZL { background-color:hsla(0, 0%, 0%, 0.6) !important; backdrop-filter: blur(5px) !important; } /* titles on avatar cards */
         /* DM CHAT BOX */
@@ -48,7 +48,7 @@
         }
         /* Incoming messages (sent to us) */
         ._375XK ._2XaOw ._1j2Cd p {
-        background-color: rgba(20, 80, 80, 0.7) !important;
+        background-color: rgba(20, 80, 80, 0.3) !important;
         border: 1px solid rgba(100, 200, 200, 0.4) !important;
         border-radius: 8px !important;
         backdrop-filter: blur(10px) !important;
@@ -1079,21 +1079,50 @@ function removeTooltip() {
       
       initBase() {
         this.inject(CONFIG.STYLE_ID, `
-          @keyframes shimmer {
-            0% { background-position: -200% 0; }
-            100% { background-position: 200% 0; }
+          /* ── Utilify Panel — Noir Celestial theme ── */
+
+          @keyframes utilify-open {
+            from { opacity: 0; transform: translate(-50%, -48%) scale(0.96); }
+            to   { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+          }
+          @keyframes utilify-close {
+            from { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+            to   { opacity: 0; transform: translate(-50%, -52%) scale(0.97); }
+          }
+          @keyframes utilify-tab-in {
+            from { opacity: 0; transform: translateY(6px); }
+            to   { opacity: 1; transform: translateY(0); }
+          }
+          @keyframes utilify-star-drift {
+            0%   { transform: translateY(0px) rotate(0deg);   opacity: 0.7; }
+            50%  { transform: translateY(-4px) rotate(180deg); opacity: 1; }
+            100% { transform: translateY(0px) rotate(360deg); opacity: 0.7; }
+          }
+          @keyframes utilify-hdr-shimmer {
+            0%   { background-position: -400% center; }
+            100% { background-position:  400% center; }
+          }
+          @keyframes utilify-grain {
+            0%, 100% { transform: translate(0,   0); }
+            10%       { transform: translate(-1%, -1%); }
+            30%       { transform: translate(1%,  1%); }
+            50%       { transform: translate(-1%,  0); }
+            70%       { transform: translate(0,   1%); }
+            90%       { transform: translate(1%, -1%); }
           }
 
-          @keyframes float {
-            0%, 100% { transform: translateY(0px); }
-            50% { transform: translateY(-3px); }
+          /* ── overlay backdrop ── */
+          #utilify-backdrop {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.55);
+            backdrop-filter: blur(3px);
+            z-index: 119999;
           }
+          #utilify-backdrop.visible { display: block; }
 
-          @keyframes glow-pulse {
-            0%, 100% { opacity: 0.6; }
-            50% { opacity: 1; }
-          }
-
+          /* ── panel shell ── */
           #${CONFIG.PANEL_ID} {
             position: fixed;
             left: 50%;
@@ -1101,462 +1130,444 @@ function removeTooltip() {
             transform: translate(-50%, -50%);
             width: min(780px, 94vw);
             max-height: 72vh;
-            border-radius: 12px;
+            border-radius: 14px;
             overflow: hidden;
-            background: linear-gradient(135deg, #0d1f1d 0%, #1a2f2d 50%, #0d1f1d 100%);
-            color: #e0f0ee;
-            box-shadow: 
-              0 0 40px rgba(74, 222, 183, 0.2),
-              0 20px 80px rgba(0, 0, 0, 0.7),
-              inset 0 1px 0 rgba(74, 222, 183, 0.15);
+            /* Deep black base with a very subtle warm-neutral grain texture via SVG */
+            background-color: #080808;
+            background-image:
+              url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='200' height='200' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E"),
+              radial-gradient(ellipse 80% 60% at 70% 0%, rgba(255,255,255,0.025) 0%, transparent 60%),
+              radial-gradient(ellipse 50% 40% at 10% 100%, rgba(255,255,255,0.018) 0%, transparent 55%);
+            color: #d8d8d8;
+            box-shadow:
+              0 0 0 1px rgba(255,255,255,0.07),
+              0 2px 0 rgba(255,255,255,0.04),
+              0 24px 80px rgba(0,0,0,0.85),
+              0 8px 32px rgba(0,0,0,0.6);
             z-index: 120000;
             display: none;
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-            border: 1px solid rgba(74, 222, 183, 0.25);
-            transition: opacity 0.3s cubic-bezier(0.4, 0, 0.2, 1), 
-                        transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            opacity: 0;
-            backdrop-filter: blur(20px);
-          }
-          
-          #${CONFIG.PANEL_ID}.visible {
-            display: flex;
             flex-direction: column;
-            opacity: 1;
+            font-family: 'DM Sans', ui-sans-serif, system-ui, sans-serif;
+            opacity: 0;
           }
 
-          /* Subtle tech accent on corners */
+          #${CONFIG.PANEL_ID}.visible {
+            display: flex;
+            animation: utilify-open 0.32s cubic-bezier(0.34, 1.3, 0.64, 1) forwards;
+          }
+          #${CONFIG.PANEL_ID}.closing {
+            animation: utilify-close 0.22s cubic-bezier(0.4, 0, 1, 1) forwards;
+          }
+
+          /* grain texture overlay — animates subtly for depth */
           #${CONFIG.PANEL_ID}::before {
             content: '';
             position: absolute;
-            top: 0;
-            right: 0;
-            width: 180px;
-            height: 180px;
-            background: radial-gradient(circle at top right, rgba(74, 222, 183, 0.15) 0%, transparent 60%);
-            border-radius: 0 12px 0 0;
+            inset: 0;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='300'%3E%3Cfilter id='g'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='300' height='300' filter='url(%23g)' opacity='0.035'/%3E%3C/svg%3E");
+            animation: utilify-grain 8s steps(10) infinite;
             pointer-events: none;
+            z-index: 0;
+            border-radius: 14px;
           }
 
-          #${CONFIG.PANEL_ID}::after {
-            content: '';
+          /* ── live star canvas (injected via JS) ── */
+          #utilify-stars {
             position: absolute;
-            bottom: 0;
-            left: 0;
-            width: 180px;
-            height: 180px;
-            background: radial-gradient(circle at bottom left, rgba(42, 157, 143, 0.1) 0%, transparent 60%);
+            inset: 0;
             pointer-events: none;
+            z-index: 0;
+            border-radius: 14px;
+            opacity: 0.55;
           }
 
+          /* ── header ── */
           #${CONFIG.PANEL_ID} .header {
-            height: 64px;
+            height: 58px;
             display: flex;
             align-items: center;
             gap: 16px;
-            padding: 0 28px;
+            padding: 0 24px;
             cursor: grab;
             user-select: none;
-            background: linear-gradient(135deg, rgba(20, 35, 33, 0.85) 0%, rgba(15, 28, 26, 0.95) 100%);
-            border-bottom: 1px solid rgba(74, 222, 183, 0.12);
+            background: rgba(255,255,255,0.025);
+            border-bottom: 1px solid rgba(255,255,255,0.07);
             position: relative;
+            z-index: 2;
+            flex-shrink: 0;
           }
+          #${CONFIG.PANEL_ID} .header:active { cursor: grabbing; }
 
+          /* shimmer line under header */
           #${CONFIG.PANEL_ID} .header::after {
             content: '';
             position: absolute;
-            bottom: 0;
-            left: 5%;
-            right: 5%;
+            bottom: -1px;
+            left: 0; right: 0;
             height: 1px;
-            background: linear-gradient(90deg, 
-              transparent 0%, 
-              rgba(74, 222, 183, 0.4) 50%, 
+            background: linear-gradient(90deg,
+              transparent 0%,
+              rgba(255,255,255,0.18) 30%,
+              rgba(255,255,255,0.35) 50%,
+              rgba(255,255,255,0.18) 70%,
               transparent 100%);
+            background-size: 400% 100%;
+            animation: utilify-hdr-shimmer 6s linear infinite;
           }
 
           #${CONFIG.PANEL_ID} .title {
-            font-weight: 500;
-            font-size: 11px;
-            letter-spacing: 3px;
-            color: rgba(74, 222, 183, 0.7);
-            text-transform: uppercase;
             flex: 1;
             text-align: center;
+            font-size: 10px;
+            font-weight: 600;
+            letter-spacing: 4px;
+            text-transform: uppercase;
+            color: rgba(255,255,255,0.45);
             position: relative;
           }
-          
           #${CONFIG.PANEL_ID} .title::before,
           #${CONFIG.PANEL_ID} .title::after {
-            content: '◆';
+            content: '✦';
             position: absolute;
-            color: rgba(74, 222, 183, 0.5);
-            font-size: 8px;
+            font-size: 7px;
+            color: rgba(255,255,255,0.25);
+            top: 50%; transform: translateY(-50%);
+            animation: utilify-star-drift 4s ease-in-out infinite;
           }
-          
-          #${CONFIG.PANEL_ID} .title::before {
-            left: -20px;
-          }
-          
-          #${CONFIG.PANEL_ID} .title::after {
-            right: -20px;
-          }
+          #${CONFIG.PANEL_ID} .title::before { left: -18px; animation-delay: 0s; }
+          #${CONFIG.PANEL_ID} .title::after  { right: -18px; animation-delay: 2s; }
 
           #${CONFIG.PANEL_ID} .close {
-            background: rgba(74, 222, 183, 0.08);
-            border: 1px solid rgba(74, 222, 183, 0.2);
-            color: #4adeb7;
+            background: rgba(255,255,255,0.05);
+            border: 1px solid rgba(255,255,255,0.1);
+            color: rgba(255,255,255,0.5);
             cursor: pointer;
-            padding: 8px 14px;
+            padding: 7px 13px;
             border-radius: 8px;
-            font-size: 18px;
+            font-size: 17px;
             line-height: 1;
-            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            transition: background 0.18s ease, color 0.18s ease, border-color 0.18s ease, transform 0.18s ease;
           }
-          
           #${CONFIG.PANEL_ID} .close:hover {
-            background: rgba(74, 222, 183, 0.15);
-            border-color: rgba(74, 222, 183, 0.4);
-            color: #6ef0cb;
-            transform: scale(1.05);
+            background: rgba(255,255,255,0.1);
+            border-color: rgba(255,255,255,0.22);
+            color: rgba(255,255,255,0.9);
+            transform: scale(1.08) rotate(5deg);
           }
 
+          /* ── body ── */
           #${CONFIG.PANEL_ID} .body {
             display: flex;
-            gap: 2px;
-            height: calc(72vh - 64px);
-            background: rgba(0, 0, 0, 0.25);
+            gap: 0;
+            flex: 1;
+            min-height: 0;
             position: relative;
+            z-index: 1;
           }
 
-          /* Made by Simon - vertical text */
+          /* "Made by Simon" watermark */
           #${CONFIG.PANEL_ID} .body::after {
             content: 'Made by Simon';
             position: absolute;
-            right: 14px;
-            bottom: 24px;
+            right: 12px;
+            bottom: 20px;
             writing-mode: vertical-rl;
-            text-orientation: mixed;
-            font-size: 10px;
+            font-size: 9px;
             letter-spacing: 2.5px;
-            color: rgba(74, 222, 183, 0.35);
+            color: rgba(255,255,255,0.1);
             font-weight: 500;
             text-transform: uppercase;
             pointer-events: none;
+            z-index: 0;
           }
 
+          /* ── tab sidebar ── */
           #${CONFIG.PANEL_ID} .tabs {
-            width: 190px;
-            background: linear-gradient(180deg, rgba(15, 28, 26, 0.7) 0%, rgba(10, 20, 18, 0.85) 100%);
-            padding: 18px 14px;
+            width: 176px;
+            flex-shrink: 0;
+            background: rgba(0,0,0,0.3);
+            border-right: 1px solid rgba(255,255,255,0.05);
+            padding: 14px 10px;
             overflow-y: auto;
             display: flex;
             flex-direction: column;
-            gap: 7px;
+            gap: 3px;
           }
 
           #${CONFIG.PANEL_ID} .tab {
-            padding: 14px 18px;
+            padding: 11px 15px;
             cursor: pointer;
-            border-left: 2px solid transparent;
-            color: #a0c8c0;
             border-radius: 8px;
-            transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
-            font-size: 13px;
+            color: rgba(255,255,255,0.38);
+            font-size: 12.5px;
             font-weight: 500;
+            letter-spacing: 0.2px;
+            transition: color 0.2s ease, background 0.2s ease, transform 0.2s cubic-bezier(0.34,1.4,0.64,1);
             position: relative;
-            overflow: hidden;
+            border: 1px solid transparent;
+            white-space: nowrap;
           }
-
-          #${CONFIG.PANEL_ID} .tab::before {
+          #${CONFIG.PANEL_ID} .tab:hover {
+            color: rgba(255,255,255,0.72);
+            background: rgba(255,255,255,0.05);
+            transform: translateX(3px);
+          }
+          #${CONFIG.PANEL_ID} .tab.active {
+            color: #ffffff;
+            background: rgba(255,255,255,0.08);
+            border-color: rgba(255,255,255,0.1);
+            transform: translateX(4px);
+            box-shadow: inset 0 0 0 0 transparent,
+                        0 2px 12px rgba(0,0,0,0.4);
+          }
+          /* little dot indicator on active tab */
+          #${CONFIG.PANEL_ID} .tab.active::before {
             content: '';
             position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: linear-gradient(135deg, rgba(74, 222, 183, 0.08) 0%, rgba(42, 157, 143, 0.05) 100%);
-            opacity: 0;
-            transition: opacity 0.25s ease;
-          }
-
-          #${CONFIG.PANEL_ID} .tab:hover {
-            background: rgba(74, 222, 183, 0.05);
-            color: #c0e8dd;
-            transform: translateX(4px);
-          }
-
-          #${CONFIG.PANEL_ID} .tab:hover::before {
-            opacity: 1;
-          }
-
-          #${CONFIG.PANEL_ID} .tab.active {
-            background: linear-gradient(135deg, rgba(74, 222, 183, 0.12) 0%, rgba(42, 157, 143, 0.08) 100%);
-            border-left-color: #4adeb7;
-            color: #4adeb7;
-            transform: translateX(5px);
-            box-shadow: 0 3px 10px rgba(74, 222, 183, 0.15);
-            position: relative;
-          }
-
-          #${CONFIG.PANEL_ID} .tab.active::after {
-            content: '◆';
-            position: absolute;
-            right: 14px;
-            top: 50%;
+            left: 0; top: 50%;
             transform: translateY(-50%);
-            color: rgba(74, 222, 183, 0.7);
-            font-size: 10px;
+            width: 3px; height: 16px;
+            background: rgba(255,255,255,0.6);
+            border-radius: 0 2px 2px 0;
+          }
+          /* sparkle on active */
+          #${CONFIG.PANEL_ID} .tab.active::after {
+            content: '✦';
+            position: absolute;
+            right: 12px; top: 50%;
+            transform: translateY(-50%);
+            font-size: 8px;
+            color: rgba(255,255,255,0.3);
+            animation: utilify-star-drift 3s ease-in-out infinite;
           }
 
-          #${CONFIG.PANEL_ID} .tab.active::before {
-            opacity: 1;
-          }
-
+          /* ── content pane ── */
           #${CONFIG.PANEL_ID} .content {
             flex: 1;
             overflow-y: auto;
-            padding: 26px;
-            background: linear-gradient(180deg, rgba(13, 23, 21, 0.95) 0%, rgba(10, 18, 16, 0.98) 100%);
+            padding: 24px 28px;
             position: relative;
+            background: transparent;
           }
+          .tab-content { animation: utilify-tab-in 0.22s ease forwards; }
 
+          /* ── form elements ── */
           .field-row {
-            margin: 18px 0;
+            margin: 16px 0;
             display: flex;
-            gap: 14px;
+            gap: 12px;
             align-items: center;
           }
 
           .field-label {
-            font-size: 13px;
-            color: #b8d8d0;
-            min-width: 120px;
+            font-size: 12.5px;
+            color: rgba(255,255,255,0.5);
+            min-width: 118px;
             font-weight: 500;
+            letter-spacing: 0.1px;
           }
 
           .color-input {
-            width: 56px;
-            height: 40px;
-            border: 2px solid rgba(74, 222, 183, 0.25);
+            width: 52px;
+            height: 38px;
+            border: 1px solid rgba(255,255,255,0.12);
             border-radius: 8px;
             cursor: pointer;
-            transition: all 0.2s ease;
-            background: rgba(0, 0, 0, 0.4);
+            transition: border-color 0.18s ease, transform 0.18s ease, box-shadow 0.18s ease;
+            background: rgba(0,0,0,0.5);
           }
-          
           .color-input:hover {
-            transform: scale(1.05);
-            border-color: rgba(74, 222, 183, 0.5);
-            box-shadow: 0 4px 16px rgba(74, 222, 183, 0.2);
+            transform: scale(1.06);
+            border-color: rgba(255,255,255,0.3);
+            box-shadow: 0 4px 16px rgba(0,0,0,0.4);
           }
 
-          input[type="text"], input[type="number"], select, textarea {
-            padding: 11px 15px;
-            background: rgba(0, 0, 0, 0.5);
-            border: 1px solid rgba(74, 222, 183, 0.18);
+          #${CONFIG.PANEL_ID} input[type="text"],
+          #${CONFIG.PANEL_ID} input[type="number"],
+          #${CONFIG.PANEL_ID} select,
+          #${CONFIG.PANEL_ID} textarea {
+            padding: 10px 14px;
+            background: rgba(255,255,255,0.04);
+            border: 1px solid rgba(255,255,255,0.1);
             border-radius: 8px;
-            color: #e0f0ee;
-            font-size: 13px;
-            transition: all 0.2s ease;
+            color: rgba(255,255,255,0.85);
+            font-size: 12.5px;
+            font-family: inherit;
+            transition: border-color 0.18s ease, background 0.18s ease, box-shadow 0.18s ease;
           }
-
-          input[type="text"]:focus, input[type="number"]:focus, select:focus, textarea:focus {
+          #${CONFIG.PANEL_ID} input[type="text"]:focus,
+          #${CONFIG.PANEL_ID} input[type="number"]:focus,
+          #${CONFIG.PANEL_ID} select:focus,
+          #${CONFIG.PANEL_ID} textarea:focus {
             outline: none;
-            border-color: rgba(74, 222, 183, 0.4);
-            box-shadow: 0 0 0 3px rgba(74, 222, 183, 0.1);
+            border-color: rgba(255,255,255,0.28);
+            background: rgba(255,255,255,0.07);
+            box-shadow: 0 0 0 3px rgba(255,255,255,0.04);
+          }
+          #${CONFIG.PANEL_ID} select option {
+            background: #111;
+            color: #ddd;
           }
 
-          input[type="range"] {
+          #${CONFIG.PANEL_ID} input[type="range"] {
             width: 100%;
-            height: 6px;
-            border-radius: 3px;
-            background: linear-gradient(90deg, rgba(42, 157, 143, 0.3) 0%, rgba(74, 222, 183, 0.5) 100%);
+            height: 4px;
+            border-radius: 2px;
+            background: rgba(255,255,255,0.12);
             outline: none;
             -webkit-appearance: none;
+            cursor: pointer;
           }
-          
-          input[type="range"]::-webkit-slider-thumb {
+          #${CONFIG.PANEL_ID} input[type="range"]::-webkit-slider-thumb {
             -webkit-appearance: none;
-            width: 18px;
-            height: 18px;
+            width: 16px; height: 16px;
             border-radius: 50%;
-            background: linear-gradient(135deg, #4adeb7 0%, #2a9d8f 100%);
+            background: #ffffff;
             cursor: pointer;
-            transition: all 0.2s ease;
-            box-shadow: 0 2px 8px rgba(74, 222, 183, 0.4);
+            transition: transform 0.18s ease, box-shadow 0.18s ease;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.5);
           }
-          
-          input[type="range"]::-webkit-slider-thumb:hover {
-            transform: scale(1.2);
-            box-shadow: 0 4px 16px rgba(74, 222, 183, 0.6);
+          #${CONFIG.PANEL_ID} input[type="range"]::-webkit-slider-thumb:hover {
+            transform: scale(1.25);
+            box-shadow: 0 0 0 4px rgba(255,255,255,0.1), 0 4px 12px rgba(0,0,0,0.5);
           }
 
-          input[type="checkbox"] {
-            width: 18px;
-            height: 18px;
+          #${CONFIG.PANEL_ID} input[type="checkbox"] {
+            width: 17px; height: 17px;
             cursor: pointer;
-            accent-color: #4adeb7;
+            accent-color: #ffffff;
           }
 
+          /* ── buttons ── */
           .button {
-            padding: 11px 22px;
-            background: linear-gradient(135deg, rgba(74, 222, 183, 0.18) 0%, rgba(42, 157, 143, 0.12) 100%);
-            color: #4adeb7;
+            padding: 10px 20px;
+            background: rgba(255,255,255,0.06);
+            color: rgba(255,255,255,0.8);
             border-radius: 8px;
-            border: 1px solid rgba(74, 222, 183, 0.35);
+            border: 1px solid rgba(255,255,255,0.12);
             cursor: pointer;
             font-weight: 600;
-            font-size: 13px;
-            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            font-size: 12.5px;
+            font-family: inherit;
+            letter-spacing: 0.2px;
+            transition: background 0.2s ease, color 0.2s ease, border-color 0.2s ease,
+                        transform 0.2s cubic-bezier(0.34,1.4,0.64,1), box-shadow 0.2s ease;
             position: relative;
             overflow: hidden;
           }
-
-          .button::before {
+          .button::after {
             content: '';
             position: absolute;
-            top: 50%;
-            left: 50%;
-            width: 0;
-            height: 0;
-            border-radius: 50%;
-            background: rgba(255, 255, 255, 0.12);
-            transform: translate(-50%, -50%);
-            transition: width 0.3s ease, height 0.3s ease;
+            inset: 0;
+            background: radial-gradient(circle at var(--mx,50%) var(--my,50%), rgba(255,255,255,0.12) 0%, transparent 60%);
+            opacity: 0;
+            transition: opacity 0.25s ease;
           }
-
-          .button:hover::before {
-            width: 300px;
-            height: 300px;
-          }
-
+          .button:hover::after { opacity: 1; }
           .button:hover {
             transform: translateY(-2px);
-            box-shadow: 0 6px 20px rgba(74, 222, 183, 0.3);
-            border-color: rgba(74, 222, 183, 0.6);
+            background: rgba(255,255,255,0.1);
+            border-color: rgba(255,255,255,0.22);
+            color: #ffffff;
+            box-shadow: 0 6px 20px rgba(0,0,0,0.4);
           }
+          .button:active { transform: translateY(0); }
 
-          .button:active {
-            transform: translateY(0);
-          }
-
+          /* ── text & labels ── */
           .small-note {
-            font-size: 12px;
-            color: #8aa8a0;
+            font-size: 11.5px;
+            color: rgba(255,255,255,0.32);
             margin-top: 10px;
-            line-height: 1.7;
+            line-height: 1.75;
           }
 
-          label {
+          #${CONFIG.PANEL_ID} label {
             display: flex;
             align-items: center;
-            gap: 12px;
+            gap: 11px;
             cursor: pointer;
-            color: #b8d8d0;
-            font-size: 14px;
-            transition: color 0.2s ease;
+            color: rgba(255,255,255,0.6);
+            font-size: 13px;
+            transition: color 0.18s ease;
+          }
+          #${CONFIG.PANEL_ID} label:hover { color: rgba(255,255,255,0.9); }
+
+          /* ── plugin cards ── */
+          .plugin-item {
+            background: rgba(255,255,255,0.03);
+            border: 1px solid rgba(255,255,255,0.08);
+            border-radius: 10px;
+            padding: 14px;
+            margin-bottom: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: border-color 0.18s ease, background 0.18s ease;
+          }
+          .plugin-item:hover {
+            background: rgba(255,255,255,0.05);
+            border-color: rgba(255,255,255,0.14);
+          }
+          .plugin-info h4 {
+            color: rgba(255,255,255,0.88);
+            font-size: 13.5px;
+            margin: 0 0 4px 0;
+          }
+          .plugin-info p {
+            color: rgba(255,255,255,0.38);
+            font-size: 11.5px;
+            margin: 0 0 2px 0;
+          }
+          .plugin-meta {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 4px 14px;
+            margin-top: 6px;
+          }
+          .plugin-meta span { color: rgba(255,255,255,0.28); font-size: 11px; }
+          .plugin-meta span b { color: rgba(255,255,255,0.5); font-weight: 600; }
+          .plugin-controls { display: flex; gap: 8px; }
+          .plugin-toggle { padding: 6px 12px; font-size: 11.5px; }
+          .plugin-remove {
+            background: rgba(239,71,111,0.12);
+            border-color: rgba(239,71,111,0.25);
+            color: #ef476f;
+            padding: 6px 12px;
+            font-size: 11.5px;
+          }
+          .plugin-remove:hover {
+            background: rgba(239,71,111,0.22);
+            border-color: rgba(239,71,111,0.45);
+            color: #ff6b8a;
           }
 
-          label:hover {
-            color: #d0ede5;
+          /* ── scrollbars ── */
+          #${CONFIG.PANEL_ID} ::-webkit-scrollbar { width: 5px; height: 5px; }
+          #${CONFIG.PANEL_ID} ::-webkit-scrollbar-track { background: transparent; }
+          #${CONFIG.PANEL_ID} ::-webkit-scrollbar-thumb {
+            background: rgba(255,255,255,0.12);
+            border-radius: 3px;
+          }
+          #${CONFIG.PANEL_ID} ::-webkit-scrollbar-thumb:hover {
+            background: rgba(255,255,255,0.24);
           }
 
-        /* Plugin list styles */
-        .plugin-item {
-        background: rgba(74, 222, 183, 0.05);
-        border: 1px solid rgba(74, 222, 183, 0.15);
-        border-radius: 8px;
-        padding: 14px;
-        margin-bottom: 12px;
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        }
-
-        .plugin-info h4 {
-        color: #4adeb7;
-        font-size: 14px;
-        margin: 0 0 4px 0;
-        }
-
-        .plugin-info p {
-        color: #8aa8a0;
-        font-size: 12px;
-        margin: 0 0 2px 0;
-        }
-
-        .plugin-meta {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 4px 14px;
-        margin-top: 6px;
-        }
-
-        .plugin-meta span {
-        color: #5c8a80;
-        font-size: 11px;
-        }
-
-        .plugin-meta span b {
-        color: #7ab8ae;
-        font-weight: 600;
-        }
-
-        .plugin-controls {
-        display: flex;
-        gap: 8px;
-        }
-
-        .plugin-toggle {
-        padding: 6px 12px;
-        font-size: 12px;
-        }
-
-        .plugin-remove {
-        background: rgba(239, 71, 111, 0.15);
-        border-color: rgba(239, 71, 111, 0.3);
-        color: #ef476f;
-        padding: 6px 12px;
-        font-size: 12px;
-        }
-
-        .plugin-remove:hover {
-        background: rgba(239, 71, 111, 0.25);
-        border-color: rgba(239, 71, 111, 0.5);
-        }
-
-          /* Scrollbars */
-          ::-webkit-scrollbar {
-            width: 10px;
-            height: 10px;
-          }
-          
-          ::-webkit-scrollbar-track {
-            background: rgba(0, 0, 0, 0.3);
-          }
-          
-          ::-webkit-scrollbar-thumb {
-            background: linear-gradient(180deg, rgba(74, 222, 183, 0.35) 0%, rgba(42, 157, 143, 0.35) 100%);
-            border-radius: 5px;
-            border: 2px solid transparent;
-            background-clip: padding-box;
-          }
-          
-          ::-webkit-scrollbar-thumb:hover {
-            background: linear-gradient(180deg, rgba(74, 222, 183, 0.55) 0%, rgba(42, 157, 143, 0.55) 100%);
-            background-clip: padding-box;
-          }
-
-          a {
-            color: #4adeb7;
+          /* ── links ── */
+          #${CONFIG.PANEL_ID} a {
+            color: rgba(255,255,255,0.65);
             text-decoration: none;
-            transition: color 0.2s ease;
+            border-bottom: 1px solid rgba(255,255,255,0.18);
+            transition: color 0.18s ease, border-color 0.18s ease;
+          }
+          #${CONFIG.PANEL_ID} a:hover {
+            color: #ffffff;
+            border-color: rgba(255,255,255,0.5);
+            text-decoration: none;
           }
 
-          a:hover {
-            color: #6ef0cb;
-            text-decoration: underline;
+          /* ── value readouts next to range sliders ── */
+          #${CONFIG.PANEL_ID} [id$="-val"] {
+            color: rgba(255,255,255,0.55) !important;
           }
         `);
       },
@@ -1584,6 +1595,7 @@ function removeTooltip() {
       applyGlass(cfg) {
         if (!cfg.glassPanels?.enabled) {
           this.inject('utilify_glass', '');
+          this._stopHueTextEnforcer();
           return;
         }
         const { radius, hue, alpha } = cfg.glassPanels;
@@ -1600,6 +1612,55 @@ function removeTooltip() {
             transition: all 0.25s ease !important;            
           }
         `);
+        // Inline-style enforcer: stylesheet !important can't override element.style,
+        // so we stamp the computed hex directly onto each matching element and watch
+        // for new ones via MutationObserver.
+        this._startHueTextEnforcer(hue);
+      },
+
+      // Convert HSL → hex so we can stamp a concrete value on .style.color
+      _hslToHex(h, s, l) {
+        s /= 100; l /= 100;
+        const a = s * Math.min(l, 1 - l);
+        const f = n => {
+          const k = (n + h / 30) % 12;
+          const color = l - a * Math.max(Math.min(k - 3, 9 - k, 1), -1);
+          return Math.round(255 * color).toString(16).padStart(2, '0');
+        };
+        return `#${f(0)}${f(8)}${f(4)}`;
+      },
+
+      _hueTextObserver: null,
+      _hueTextSelectors: '.css-1hitfzb, .css-1q1eu9e, a.__piu-link',
+
+      _stampHueColor(hex) {
+        document.querySelectorAll(this._hueTextSelectors).forEach(el => {
+          el.style.setProperty('color', hex, '');
+        });
+      },
+
+      _startHueTextEnforcer(hue) {
+        // 70% sat, 72% lightness → readable on dark BGs at any hue
+        const hex = this._hslToHex(hue, 70, 72);
+
+        this._stopHueTextEnforcer();
+        this._stampHueColor(hex);
+
+        this._hueTextObserver = new MutationObserver(() => {
+          this._stampHueColor(hex);
+        });
+        this._hueTextObserver.observe(document.body, { childList: true, subtree: true });
+      },
+
+      _stopHueTextEnforcer() {
+        if (this._hueTextObserver) {
+          this._hueTextObserver.disconnect();
+          this._hueTextObserver = null;
+        }
+        // Wipe any previously stamped inline color so the page default takes over
+        document.querySelectorAll(this._hueTextSelectors).forEach(el => {
+          el.style.removeProperty('color');
+        });
       },
       
       applyCustomCSS(css) {
@@ -2209,10 +2270,19 @@ function removeTooltip() {
       
       create() {
         if (this.panel) return this.panel;
+
+        // Backdrop overlay
+        if (!document.getElementById('utilify-backdrop')) {
+          const bd = document.createElement('div');
+          bd.id = 'utilify-backdrop';
+          bd.addEventListener('click', () => this.hide());
+          document.body.appendChild(bd);
+        }
         
         this.panel = document.createElement('div');
         this.panel.id = CONFIG.PANEL_ID;
         this.panel.innerHTML = `
+          <canvas id="utilify-stars"></canvas>
           <div class="header">
             <div class="title">Utilify V2</div>
             <button class="close" aria-label="Close">×</button>
@@ -2236,7 +2306,140 @@ function removeTooltip() {
         document.body.appendChild(this.panel);
         this.setupEvents();
         this.enableDrag();
+        this._startStars();
         return this.panel;
+      },
+
+      _startStars() {
+        const canvas = document.getElementById('utilify-stars');
+        if (!canvas) return;
+        const ctx = canvas.getContext('2d');
+        const dpr = window.devicePixelRatio || 1;
+
+        const stars = [];
+        const sparkles = [];
+
+        const resize = () => {
+          const r = this.panel.getBoundingClientRect();
+          canvas.width  = r.width  * dpr;
+          canvas.height = r.height * dpr;
+          canvas.style.width  = r.width  + 'px';
+          canvas.style.height = r.height + 'px';
+          ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        };
+
+        const W = () => canvas.width  / dpr;
+        const H = () => canvas.height / dpr;
+
+        const rand = (a, b) => Math.random() * (b - a) + a;
+
+        // Static background stars
+        const initStars = () => {
+          stars.length = 0;
+          const n = Math.floor((W() * H()) / 3200);
+          for (let i = 0; i < n; i++) {
+            stars.push({
+              x: rand(0, W()), y: rand(0, H()),
+              r: rand(0.4, 1.4),
+              a: rand(0.15, 0.65),
+              twinkleSpeed: rand(0.008, 0.025),
+              twinklePhase: rand(0, Math.PI * 2),
+              // 4-pointed cross star for ~20% of them
+              cross: Math.random() < 0.2
+            });
+          }
+        };
+
+        // Sparkle bursts (occasional, float up and fade)
+        const spawnSparkle = () => {
+          sparkles.push({
+            x: rand(20, W() - 20),
+            y: rand(20, H() - 20),
+            r: rand(1.5, 3.5),
+            a: 1,
+            vy: rand(-0.35, -0.1),
+            life: 1,
+            decay: rand(0.008, 0.02),
+            cross: true
+          });
+        };
+
+        let sparkleTimer = 0;
+        let raf;
+
+        const drawCross = (x, y, r, a) => {
+          ctx.save();
+          ctx.globalAlpha = a;
+          ctx.translate(x, y);
+          // 4-point star shape
+          ctx.beginPath();
+          const arms = 4;
+          for (let i = 0; i < arms * 2; i++) {
+            const angle = (i * Math.PI) / arms;
+            const dist  = i % 2 === 0 ? r : r * 0.25;
+            i === 0
+              ? ctx.moveTo(Math.cos(angle) * dist, Math.sin(angle) * dist)
+              : ctx.lineTo(Math.cos(angle) * dist, Math.sin(angle) * dist);
+          }
+          ctx.closePath();
+          ctx.fillStyle = '#ffffff';
+          ctx.fill();
+          // tiny glow
+          if (r > 1.8) {
+            ctx.globalAlpha = a * 0.3;
+            ctx.shadowBlur  = r * 4;
+            ctx.shadowColor = '#ffffff';
+            ctx.fill();
+            ctx.shadowBlur = 0;
+          }
+          ctx.restore();
+        };
+
+        const loop = (ts) => {
+          if (!document.contains(canvas)) return;
+          ctx.clearRect(0, 0, W(), H());
+
+          // Background stars
+          for (const s of stars) {
+            s.twinklePhase += s.twinkleSpeed;
+            const alpha = s.a * (0.6 + 0.4 * Math.sin(s.twinklePhase));
+            if (s.cross) {
+              drawCross(s.x, s.y, s.r * 1.6, alpha);
+            } else {
+              ctx.beginPath();
+              ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2);
+              ctx.fillStyle = `rgba(255,255,255,${alpha})`;
+              ctx.fill();
+            }
+          }
+
+          // Sparkle bursts
+          for (let i = sparkles.length - 1; i >= 0; i--) {
+            const sp = sparkles[i];
+            sp.y    += sp.vy;
+            sp.life -= sp.decay;
+            sp.a     = Math.max(0, sp.life);
+            if (sp.life <= 0) { sparkles.splice(i, 1); continue; }
+            drawCross(sp.x, sp.y, sp.r, sp.a);
+          }
+
+          // Spawn new sparkle every ~2.5s
+          sparkleTimer += 16;
+          if (sparkleTimer > 2500) {
+            spawnSparkle();
+            sparkleTimer = rand(0, 800); // jitter
+          }
+
+          raf = requestAnimationFrame(loop);
+        };
+
+        resize();
+        initStars();
+        raf = requestAnimationFrame(loop);
+
+        // Re-init if panel resizes (dragged to edge etc.)
+        const ro = new ResizeObserver(() => { resize(); initStars(); });
+        ro.observe(this.panel);
       },
       
       renderTabs() {
@@ -2245,7 +2448,7 @@ function removeTooltip() {
             <div class="field-row">
               <span class="field-label">Angle</span>
               <input id="gradient-angle" type="range" min="0" max="360" value="135" style="flex:1"/>
-              <span id="angle-val" style="min-width:40px; text-align:right; color:#4adeb7;">135°</span>
+              <span id="angle-val" style="min-width:40px; text-align:right; color:rgba(255,255,255,0.5);">135°</span>
             </div>
             <div class="field-row">
               <span class="field-label">Color 1</span>
@@ -2296,17 +2499,17 @@ function removeTooltip() {
             <div class="field-row">
               <span class="field-label">Border Radius</span>
               <input id="glass-radius" type="number" min="0" max="50" value="6" style="width:80px"/>
-              <span style="color:#a0c8c0;">px</span>
+              <span style="color:rgba(255,255,255,0.35);">px</span>
             </div>
             <div class="field-row">
               <span class="field-label">Hue</span>
               <input id="glass-hue" type="range" min="0" max="360" value="170" style="flex:1"/>
-              <span id="glass-hue-val" style="min-width:40px; text-align:right; color:#4adeb7;">170</span>
+              <span id="glass-hue-val" style="min-width:40px; text-align:right; color:rgba(255,255,255,0.5);">170</span>
             </div>
             <div class="field-row">
               <span class="field-label">Alpha</span>
               <input id="glass-alpha" type="range" min="1" max="50" value="18" style="flex:1"/>
-              <span id="glass-alpha-val" style="min-width:40px; text-align:right; color:#4adeb7;">18</span>
+              <span id="glass-alpha-val" style="min-width:40px; text-align:right; color:rgba(255,255,255,0.5);">18</span>
             </div>
             <div style="margin-top:24px">
               <span class="field-label" style="display:block; margin-bottom:8px;">Online CSS URLs (one per line)</span>
@@ -2374,15 +2577,15 @@ function removeTooltip() {
 
           <div class="tab-content" id="tab-about" style="display:none">
             <div style="text-align:center; padding:20px 0;">
-              <h3 style="color:#4adeb7; margin-bottom:16px; font-size:20px;">◆ Utilify V2 ◆</h3>
-              <p class="small-note" style="font-size:13px; line-height:1.8; margin-bottom:24px;">
+              <h3 style="color:rgba(255,255,255,0.88); margin-bottom:16px; font-size:18px; letter-spacing:3px; text-transform:uppercase; font-weight:500;">✦ Utilify V2 ✦</h3>
+              <p class="small-note" style="font-size:13px; line-height:1.9; margin-bottom:24px;">
                 Made by Community For Community.<br>
-                Design inspired by Zhuang Fangyi from A: Endfield<br><br>
+                Updates come and go based on my mood, lol<br><br>
                 Fully maintained by <a href="https://www.github.com/gxthickitty/utilify" target="_blank">Simon</a>
               </p>
-              <div style="border-top:1px solid rgba(74, 222, 183, 0.15); padding-top:20px;">
-                <h4 style="color:#6ef0cb; font-size:14px; margin-bottom:16px;">Contributors</h4>
-                <div style="display:grid; grid-template-columns: repeat(3, 1fr); gap:12px; font-size:13px; color:#a0c8c0;">
+              <div style="border-top:1px solid rgba(255,255,255,0.07); padding-top:20px;">
+                <h4 style="color:rgba(255,255,255,0.55); font-size:10px; letter-spacing:3px; text-transform:uppercase; margin-bottom:16px; font-weight:500;">Contributors</h4>
+                <div style="display:grid; grid-template-columns: repeat(3, 1fr); gap:10px; font-size:12.5px; color:rgba(255,255,255,0.35);">
                   <div>Death Wolf.</div>
                   <div>Snowy</div>
                   <div>Awoi</div>
@@ -2396,7 +2599,7 @@ function removeTooltip() {
                   <div>ReZa</div> 
                   <div>ValDon</div>
                 </div>
-                <p class="small-note" style="margin-top:16px;">Thank you to all testers and supporters! ✨</p>
+                <p class="small-note" style="margin-top:16px;">Thank you to all testers and supporters! ✦</p>
               </div>
             </div>
           </div>
@@ -2751,13 +2954,23 @@ function removeTooltip() {
       },
       
       show() {
+        const bd = document.getElementById('utilify-backdrop');
+        if (bd) bd.classList.add('visible');
+        this.panel.classList.remove('closing');
         this.panel.classList.add('visible');
         const cfg = Storage.getConfig();
         this.loadConfig(cfg);
       },
       
       hide() {
-        this.panel.classList.remove('visible');
+        const bd = document.getElementById('utilify-backdrop');
+        if (bd) bd.classList.remove('visible');
+        this.panel.classList.add('closing');
+        const onEnd = () => {
+          this.panel.classList.remove('visible', 'closing');
+          this.panel.removeEventListener('animationend', onEnd);
+        };
+        this.panel.addEventListener('animationend', onEnd);
       },
       
       loadConfig(cfg) {
@@ -2801,22 +3014,24 @@ function removeTooltip() {
         const btn = document.createElement('button');
         btn.id = 'utilify_settings_btn';
         btn.setAttribute('aria-label', 'Open Utilify Settings');
-        btn.innerHTML = '◆';
+        btn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="currentColor" style="display:block;transition:transform 0.5s cubic-bezier(0.34,1.2,0.64,1);pointer-events:none;">
+          <path d="M12 15.5A3.5 3.5 0 0 1 8.5 12 3.5 3.5 0 0 1 12 8.5a3.5 3.5 0 0 1 3.5 3.5 3.5 3.5 0 0 1-3.5 3.5m7.43-2.92c.04-.34.07-.69.07-1.08s-.03-.73-.07-1.08l2.32-1.82c.21-.16.27-.45.14-.69l-2.2-3.81c-.13-.24-.42-.32-.66-.24l-2.74 1.1c-.57-.44-1.18-.8-1.86-1.07L14.07 2.1c-.04-.26-.27-.44-.53-.44h-4.4c-.26 0-.49.18-.53.44L8.26 4.89C7.58 5.16 6.97 5.53 6.4 5.96L3.66 4.86c-.24-.08-.53 0-.66.24L.8 8.91c-.14.24-.07.53.14.69l2.32 1.82c-.04.35-.06.69-.06 1.08s.02.73.06 1.08L.94 15.4c-.21.16-.27.45-.14.69l2.2 3.81c.13.24.42.32.66.24l2.74-1.1c.57.44 1.18.8 1.86 1.07l.35 2.79c.04.26.27.44.53.44h4.4c.26 0 .49-.18.53-.44l.35-2.79c.68-.27 1.29-.63 1.86-1.07l2.74 1.1c.24.08.53 0 .66-.24l2.2-3.81c.14-.24.07-.53-.14-.69l-2.32-1.82z"/>
+        </svg>`;
 
         btn.style.cssText = `
           width: 26px;
           height: 26px;
           border-radius: 50%;
-          background: linear-gradient(135deg, rgba(74, 222, 183, 0.25), rgba(42, 157, 143, 0.2));
+          background: rgba(255,255,255,0.08);
           backdrop-filter: blur(10px);
-          border: 1px solid rgba(74, 222, 183, 0.4);
-          color: #4adeb7;
+          border: 1px solid rgba(255,255,255,0.15);
+          color: rgba(255,255,255,0.6);
           font-size: 11px;
           line-height: 1;
           margin-right: 8px;
           cursor: pointer;
-          box-shadow: 0 4px 20px rgba(74, 222, 183, 0.25);
-          transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+          box-shadow: 0 2px 10px rgba(0,0,0,0.3);
+          transition: background 0.25s ease, color 0.25s ease, border-color 0.25s ease, box-shadow 0.25s ease;
           display: flex;
           align-items: center;
           justify-content: center;
@@ -2824,21 +3039,36 @@ function removeTooltip() {
         `;
 
         btn.addEventListener('mouseenter', () => {
-          btn.style.transform = 'scale(1.15)';
-          btn.style.boxShadow = '0 6px 30px rgba(74, 222, 183, 0.4)';
-          btn.style.borderColor = 'rgba(74, 222, 183, 0.6)';
+          btn.style.background = 'rgba(255,255,255,0.14)';
+          btn.style.color = 'rgba(255,255,255,0.95)';
+          btn.style.borderColor = 'rgba(255,255,255,0.3)';
+          btn.style.boxShadow = '0 4px 18px rgba(0,0,0,0.4)';
+          const svg = btn.querySelector('svg');
+          if (svg) svg.style.transform = 'rotate(90deg)';
         });
 
         btn.addEventListener('mouseleave', () => {
-          btn.style.transform = 'scale(1)';
-          btn.style.boxShadow = '0 4px 20px rgba(74, 222, 183, 0.25)';
-          btn.style.borderColor = 'rgba(74, 222, 183, 0.4)';
+          btn.style.background = 'rgba(255,255,255,0.08)';
+          btn.style.color = 'rgba(255,255,255,0.6)';
+          btn.style.borderColor = 'rgba(255,255,255,0.15)';
+          btn.style.boxShadow = '0 2px 10px rgba(0,0,0,0.3)';
+          const svg = btn.querySelector('svg');
+          if (svg) svg.style.transform = 'rotate(0deg)';
         });
 
         btn.addEventListener('click', () => UI.show());
 
         li.appendChild(btn);
-        targetList.insertBefore(li, targetList.firstElementChild);
+        // Capture the reference immediately before inserting — React may have already
+        // replaced firstElementChild by the time a stale reference is used.
+        const refNode = targetList.firstElementChild || null;
+        if (refNode && refNode.parentNode !== targetList) return false; // stale, bail
+        try {
+          targetList.insertBefore(li, refNode);
+        } catch {
+          // React reconciled the list between our check and insert; just append instead.
+          try { targetList.appendChild(li); } catch {}
+        }
 
         return true;
       };
@@ -3340,7 +3570,7 @@ function removeTooltip() {
         if (!logoImg) return false;
 
         logoImg.removeAttribute('srcset');
-        logoImg.src = "https://i.imgur.com/G3Y7IM8.jpeg";
+        logoImg.src = "https://avatars.githubusercontent.com/u/143356794?v=4";
         logoImg.alt = "You're using UtilifyV2 by Simon! Thank you!";
 
         logoImg.style.setProperty('object-fit', 'cover', 'important');
@@ -3533,10 +3763,18 @@ function removeTooltip() {
   });
 
   const removeReactBits = root => {
-    root.querySelectorAll('[itemprop="description"]').forEach(n => n.remove());
-    root.querySelectorAll(".MuiCollapse-root").forEach(n => n.remove());
+    // Only touch nodes that are still actually inside `root` — if React
+    // has already unmounted/replaced this subtree the node won't be in the
+    // document and touching it can corrupt React's reconciler.
+    if (!document.contains(root)) return;
+    root.querySelectorAll('[itemprop="description"]').forEach(n => {
+      if (root.contains(n)) n.remove();
+    });
+    root.querySelectorAll(".MuiCollapse-root").forEach(n => {
+      if (root.contains(n)) n.remove();
+    });
     root.querySelectorAll("button").forEach(b => {
-      if (/show more/i.test(b.textContent)) b.remove();
+      if (/show more/i.test(b.textContent) && root.contains(b)) b.remove();
     });
   };
 
@@ -3575,7 +3813,15 @@ function removeTooltip() {
   };
 
   const guard = root => {
-    const mo = new MutationObserver(() => removeReactBits(root));
+    let _guardTimer = null;
+    const mo = new MutationObserver(() => {
+      // Debounce: wait for React to finish its render burst before cleaning up.
+      // Calling removeReactBits synchronously inside a MutationObserver callback
+      // fires during React's own DOM reconciliation and can corrupt its internal
+      // fiber state, eventually causing the full-page wipe you're seeing.
+      clearTimeout(_guardTimer);
+      _guardTimer = setTimeout(() => removeReactBits(root), 50);
+    });
     mo.observe(root, { childList: true, subtree: true });
   };
 
@@ -4122,7 +4368,13 @@ function removeTooltip() {
       
       card.addEventListener('click', () => openPanel());
       
-      container.insertBefore(card, container.firstChild);
+      const refNode = container.firstChild || null;
+      if (refNode && refNode.parentNode !== container) return; // stale ref, bail
+      try {
+        container.insertBefore(card, refNode);
+      } catch {
+        try { container.appendChild(card); } catch {}
+      }
     }, 100);
   }
 
@@ -4566,216 +4818,159 @@ function removeTooltip() {
     if (document.getElementById('update-checker-style')) return;
     
     const css = `
-      @keyframes float-in {
-        from { 
-          opacity: 0; 
-          transform: translate(-50%, -30px) scale(0.92);
-        }
-        to { 
-          opacity: 1; 
-          transform: translate(-50%, 0) scale(1);
-        }
+      @keyframes utilify-notif-in {
+        from { opacity: 0; transform: translateX(-50%) translateY(-14px) scale(0.97); }
+        to   { opacity: 1; transform: translateX(-50%) translateY(0)      scale(1);    }
       }
-      
-      @keyframes shimmer-glow {
-        0%, 100% { 
-          box-shadow: 
-            0 8px 32px rgba(74, 222, 183, 0.3),
-            0 0 60px rgba(74, 222, 183, 0.15),
-            inset 0 1px 0 rgba(74, 222, 183, 0.3);
-        }
-        50% { 
-          box-shadow: 
-            0 8px 32px rgba(74, 222, 183, 0.5),
-            0 0 80px rgba(74, 222, 183, 0.25),
-            inset 0 1px 0 rgba(74, 222, 183, 0.4);
-        }
+      @keyframes utilify-notif-out {
+        from { opacity: 1; transform: translateX(-50%) translateY(0)       scale(1);    }
+        to   { opacity: 0; transform: translateX(-50%) translateY(-10px)   scale(0.97); }
       }
-      
-      @keyframes pulse-icon {
-        0%, 100% { transform: scale(1); opacity: 0.8; }
-        50% { transform: scale(1.1); opacity: 1; }
+      @keyframes utilify-notif-star {
+        0%,100% { opacity:0.5; transform:scale(1);    }
+        50%     { opacity:1;   transform:scale(1.15); }
       }
-      
-      .update-notification {
+
+      .utilify-notif {
         position: fixed;
-        top: 24px;
+        top: 20px;
         left: 50%;
         transform: translateX(-50%);
-        z-index: 2147483647;
-        padding: 18px 26px;
-        background: linear-gradient(135deg, #0d1f1d 0%, #1a2f2d 50%, #0d1f1d 100%);
-        backdrop-filter: blur(16px);
-        border: 1px solid rgba(74, 222, 183, 0.3);
-        border-radius: 12px;
-        animation: 
-          float-in 0.4s cubic-bezier(0.4, 0, 0.2, 1) forwards,
-          shimmer-glow 3s ease-in-out infinite;
-        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-        max-width: 460px;
+        z-index: 99999;
+        width: 360px;
+        background: #080808;
+        background-image:
+          url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='200' height='200' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
+        border: 1px solid rgba(255,255,255,0.09);
+        border-radius: 14px;
+        box-shadow:
+          0 0 0 1px rgba(255,255,255,0.04),
+          0 20px 60px rgba(0,0,0,0.8),
+          0 4px 16px rgba(0,0,0,0.5);
+        font-family: 'DM Sans', ui-sans-serif, system-ui, sans-serif;
+        color: rgba(255,255,255,0.75);
+        overflow: hidden;
+        animation: utilify-notif-in 0.3s cubic-bezier(0.34,1.2,0.64,1) forwards;
+      }
+
+      /* travelling shimmer on the top border */
+      .utilify-notif::before {
+        content: '';
+        position: absolute;
+        top: 0; left: 0; right: 0;
+        height: 1px;
+        background: linear-gradient(90deg,
+          transparent 0%,
+          rgba(255,255,255,0.22) 35%,
+          rgba(255,255,255,0.45) 50%,
+          rgba(255,255,255,0.22) 65%,
+          transparent 100%);
+        background-size: 300% 100%;
+        animation: utilify-hdr-shimmer 5s linear infinite;
+      }
+
+      .utilify-notif.dismissing {
+        animation: utilify-notif-out 0.22s cubic-bezier(0.4,0,1,1) forwards;
+      }
+
+      /* header row */
+      .utilify-notif-header {
         display: flex;
         align-items: center;
-        gap: 16px;
-        position: relative;
+        gap: 10px;
+        padding: 13px 14px 10px;
+        border-bottom: 1px solid rgba(255,255,255,0.06);
       }
-      
-      .update-notification::before {
-        content: '';
-        position: absolute;
-        top: 0;
-        right: 0;
-        width: 150px;
-        height: 150px;
-        background: radial-gradient(circle at top right, rgba(74, 222, 183, 0.12) 0%, transparent 60%);
-        border-radius: 0 12px 0 0;
-        pointer-events: none;
-      }
-      
-      .update-notification::after {
-        content: '';
-        position: absolute;
-        bottom: 0;
-        left: 0;
-        right: 0;
-        height: 1px;
-        background: linear-gradient(90deg, transparent 0%, rgba(74, 222, 183, 0.4) 50%, transparent 100%);
-      }
-      
-      .update-icon {
-        font-size: 32px;
-        color: #4adeb7;
-        animation: pulse-icon 2.5s ease-in-out infinite;
+      .utilify-notif-star {
+        font-size: 10px;
+        color: rgba(255,255,255,0.3);
+        animation: utilify-notif-star 3s ease-in-out infinite;
         flex-shrink: 0;
-        filter: drop-shadow(0 0 8px rgba(74, 222, 183, 0.5));
-        z-index: 1;
       }
-      
-      .update-content {
+      .utilify-notif-title {
         flex: 1;
-        z-index: 1;
-      }
-      
-      .update-title {
-        font-size: 15px;
+        font-size: 10px;
         font-weight: 600;
-        color: #4adeb7;
-        margin-bottom: 5px;
-        letter-spacing: 0.5px;
+        letter-spacing: 3px;
         text-transform: uppercase;
+        color: rgba(255,255,255,0.38);
+      }
+      .utilify-notif-close {
+        width: 22px; height: 22px;
+        border-radius: 50%;
+        background: rgba(255,255,255,0.05);
+        border: 1px solid rgba(255,255,255,0.1);
+        color: rgba(255,255,255,0.4);
+        font-size: 14px; line-height: 1;
+        cursor: pointer;
+        display: flex; align-items: center; justify-content: center;
+        flex-shrink: 0;
+        transition: background 0.18s ease, color 0.18s ease;
+      }
+      .utilify-notif-close:hover {
+        background: rgba(255,255,255,0.12);
+        color: rgba(255,255,255,0.9);
+      }
+
+      /* body */
+      .utilify-notif-body { padding: 11px 14px 13px; }
+      .utilify-notif-msg {
+        font-size: 13px;
+        line-height: 1.55;
+        color: rgba(255,255,255,0.6);
+        margin-bottom: 10px;
+      }
+      .utilify-notif-version {
+        font-weight: 600;
+        color: rgba(255,255,255,0.88);
+        background: rgba(255,255,255,0.07);
+        padding: 1px 7px;
+        border-radius: 5px;
+        border: 1px solid rgba(255,255,255,0.1);
         font-size: 12px;
       }
-      
-      .update-message {
-        font-size: 14px;
-        color: #e0f0ee;
-        line-height: 1.5;
+      .utilify-notif-current {
+        font-size: 11px;
+        color: rgba(255,255,255,0.28);
+        margin-left: 4px;
       }
-      
-      .update-version {
-        font-weight: 600;
-        color: #6ef0cb;
-        background: rgba(74, 222, 183, 0.1);
-        padding: 2px 8px;
-        border-radius: 4px;
-        border: 1px solid rgba(74, 222, 183, 0.2);
-      }
-      
-      .update-actions {
-        display: flex;
-        gap: 10px;
-        flex-shrink: 0;
-        z-index: 1;
-      }
-      
-      .update-btn {
-        padding: 9px 18px;
+
+      /* actions */
+      .utilify-notif-actions { display: flex; gap: 7px; }
+      .utilify-notif-btn {
+        flex: 1;
+        padding: 8px 12px;
         border-radius: 8px;
-        font-size: 13px;
+        font-size: 12px;
         font-weight: 600;
+        font-family: inherit;
         cursor: pointer;
-        transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+        transition: background 0.18s ease, color 0.18s ease,
+                    border-color 0.18s ease,
+                    transform 0.18s cubic-bezier(0.34,1.4,0.64,1);
         text-decoration: none;
-        display: inline-block;
-        border: none;
-        position: relative;
-        overflow: hidden;
+        display: flex; align-items: center; justify-content: center;
+        border: 1px solid rgba(255,255,255,0.1);
       }
-      
-      .update-btn::before {
-        content: '';
-        position: absolute;
-        top: 50%;
-        left: 50%;
-        width: 0;
-        height: 0;
-        border-radius: 50%;
-        background: rgba(255, 255, 255, 0.15);
-        transform: translate(-50%, -50%);
-        transition: width 0.3s ease, height 0.3s ease;
+      .utilify-notif-btn:hover { transform: translateY(-2px); }
+      .utilify-notif-btn-primary {
+        background: rgba(255,255,255,0.09);
+        color: rgba(255,255,255,0.88);
+        border-color: rgba(255,255,255,0.18);
       }
-      
-      .update-btn:hover::before {
-        width: 300px;
-        height: 300px;
+      .utilify-notif-btn-primary:hover {
+        background: rgba(255,255,255,0.15);
+        border-color: rgba(255,255,255,0.3);
       }
-      
-      .update-btn-primary {
-        background: linear-gradient(135deg, rgba(74, 222, 183, 0.2) 0%, rgba(42, 157, 143, 0.15) 100%);
-        color: #4adeb7;
-        border: 1px solid rgba(74, 222, 183, 0.4);
-        box-shadow: 0 3px 10px rgba(74, 222, 183, 0.2);
+      .utilify-notif-btn-secondary {
+        background: transparent;
+        color: rgba(255,255,255,0.32);
+        border-color: rgba(255,255,255,0.06);
       }
-      
-      .update-btn-primary:hover {
-        background: linear-gradient(135deg, rgba(74, 222, 183, 0.3) 0%, rgba(42, 157, 143, 0.25) 100%);
-        transform: translateY(-2px);
-        box-shadow: 0 6px 20px rgba(74, 222, 183, 0.35);
-        border-color: rgba(74, 222, 183, 0.6);
-      }
-      
-      .update-btn-secondary {
-        background: rgba(74, 222, 183, 0.08);
-        color: #b8d8d0;
-        border: 1px solid rgba(74, 222, 183, 0.2);
-      }
-      
-      .update-btn-secondary:hover {
-        background: rgba(74, 222, 183, 0.15);
-        color: #d0ede5;
-        transform: translateY(-1px);
-        border-color: rgba(74, 222, 183, 0.35);
-      }
-      
-      .update-close {
-        position: absolute;
-        top: 10px;
-        right: 10px;
-        width: 26px;
-        height: 26px;
-        border-radius: 50%;
-        background: rgba(74, 222, 183, 0.1);
-        border: 1px solid rgba(74, 222, 183, 0.2);
-        color: #4adeb7;
-        font-size: 18px;
-        line-height: 1;
-        cursor: pointer;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        transition: all 0.2s ease;
-        z-index: 2;
-      }
-      
-      .update-close:hover {
-        background: rgba(74, 222, 183, 0.2);
-        border-color: rgba(74, 222, 183, 0.4);
-        transform: scale(1.1);
-      }
-      
-      .update-notification.dismissing {
-        opacity: 0;
-        transform: translate(-50%, -30px) scale(0.92);
-        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      .utilify-notif-btn-secondary:hover {
+        background: rgba(255,255,255,0.05);
+        color: rgba(255,255,255,0.55);
+        border-color: rgba(255,255,255,0.12);
       }
     `;
     
@@ -4785,6 +4980,50 @@ function removeTooltip() {
     document.head.appendChild(style);
   }
 
+  function dismissNotification(notification) {
+    notification.classList.add('dismissing');
+    setTimeout(() => notification.remove(), 220);
+  }
+
+  function showUpdateNotification(currentVersion, remoteVersion) {
+    document.querySelectorAll('.utilify-notif').forEach(n => dismissNotification(n));
+    
+    if (!document.body) {
+      setTimeout(() => showUpdateNotification(currentVersion, remoteVersion), 100);
+      return;
+    }
+
+    const notification = document.createElement('div');
+    notification.className = 'utilify-notif';
+    
+    notification.innerHTML = `
+      <div class="utilify-notif-header">
+        <span class="utilify-notif-star">✦</span>
+        <span class="utilify-notif-title">Update Available</span>
+        <button class="utilify-notif-close" aria-label="Dismiss">×</button>
+      </div>
+      <div class="utilify-notif-body">
+        <div class="utilify-notif-msg">
+          <span class="utilify-notif-version">v${remoteVersion}</span> is ready to install
+          ${currentVersion ? `<span class="utilify-notif-current">· current v${currentVersion}</span>` : ''}
+        </div>
+        <div class="utilify-notif-actions">
+          <a href="${INSTALL_URL}" class="utilify-notif-btn utilify-notif-btn-primary" target="_blank" rel="noopener">Update Now</a>
+          <button class="utilify-notif-btn utilify-notif-btn-secondary" data-dismiss>Later</button>
+        </div>
+      </div>
+    `;
+    
+    document.body.appendChild(notification);
+
+    notification.querySelector('.utilify-notif-close').addEventListener('click', () => dismissNotification(notification));
+    notification.querySelector('[data-dismiss]').addEventListener('click', () => dismissNotification(notification));
+    
+    // Auto-dismiss after 45 seconds
+    setTimeout(() => { if (notification.parentNode) dismissNotification(notification); }, 45000);
+  }
+
+
   function getInstalledVersion() {
     try {
       if (typeof GM_info !== 'undefined' && GM_info?.script?.version) {
@@ -4793,21 +5032,20 @@ function removeTooltip() {
     } catch {}
     return null;
   }
-  
+
   function parseVersion(versionString) {
     if (!versionString) return [0, 0, 0];
     const parts = versionString.split('.').map(n => parseInt(n) || 0);
     while (parts.length < 3) parts.push(0);
     return parts;
   }
-  
+
   function compareVersions(current, remote) {
     const c = parseVersion(current);
     const r = parseVersion(remote);
-    
     for (let i = 0; i < 3; i++) {
-      if (r[i] > c[i]) return 1; // Remote is newer
-      if (r[i] < c[i]) return -1; // Current is newer
+      if (r[i] > c[i]) return 1;
+      if (r[i] < c[i]) return -1;
     }
     return 0;
   }
@@ -4817,96 +5055,15 @@ function removeTooltip() {
       const response = await fetch(UPDATE_CHECK_URL, {
         method: 'GET',
         cache: 'no-store',
-        headers: {
-          'Accept': 'text/plain'
-        }
+        headers: { 'Accept': 'text/plain' }
       });
-      
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
-      
       const text = await response.text();
       const match = text.match(/@version\s+([^\s\n]+)/);
-      
       return match ? match[1].trim() : null;
-    } catch (err) {
-      console.error('Utilify Update Check: Failed to fetch remote version', err);
+    } catch {
       return null;
     }
-  }
-
-  function dismissNotification(notification) {
-    notification.classList.add('dismissing');
-    setTimeout(() => notification.remove(), 300);
-  }
-
-  function showUpdateNotification(currentVersion, remoteVersion) {
-    console.log('Utilify Update Check: Showing notification for update to v' + remoteVersion);
-    document.querySelectorAll('.update-notification').forEach(n => dismissNotification(n));
-    
-    const notification = document.createElement('div');
-    notification.className = 'update-notification';
-    notification.style.cssText = `
-      position: fixed !important;
-      top: 24px !important;
-      left: 50% !important;
-      transform: translateX(-50%) !important;
-      z-index: 2147483647 !important;
-      display: flex !important;
-      visibility: visible !important;
-      opacity: 1 !important;
-    `;
-    
-    notification.innerHTML = `
-      <button class="update-close" aria-label="Dismiss">×</button>
-      <div class="update-icon">◆</div>
-      <div class="update-content">
-        <div class="update-title">◆ Update Available ◆</div>
-        <div class="update-message">
-          <span class="update-version">v${remoteVersion}</span> is ready to install
-          ${currentVersion ? ` · Current: v${currentVersion}` : ''}
-        </div>
-      </div>
-      <div class="update-actions">
-        <a href="${INSTALL_URL}" class="update-btn update-btn-primary" target="_blank" rel="noopener">
-          Update Now
-        </a>
-        <button class="update-btn update-btn-secondary" id="update-dismiss">
-          Later
-        </button>
-      </div>
-    `;
-    
-
-    if (!document.body) {
- //     console.error('Utilify Update Check: document.body does not exist yet!');
-      setTimeout(() => showUpdateNotification(currentVersion, remoteVersion), 100);
-      return;
-    }
-    
-    document.body.appendChild(notification);
- //   console.log('Utilify Update Check: Notification element appended to body', notification);
-    setTimeout(() => {
-      const check = document.querySelector('.update-notification');
-      if (check) {
-    //    console.log('Utilify Update Check: Notification confirmed in DOM');
-      } else {
-   //     console.error('Utilify Update Check: Notification NOT found in DOM!');
-      }
-    }, 100);
-
-    notification.querySelector('.update-close').addEventListener('click', () => {
-      dismissNotification(notification);
-    });
-    notification.querySelector('#update-dismiss').addEventListener('click', () => {
-      dismissNotification(notification);
-    });
-    
-    // Auto-dismiss after 45 seconds
-    setTimeout(() => {
-      if (notification.parentNode) {
-        dismissNotification(notification);
-      }
-    }, 45000);
   }
 
   function shouldCheckForUpdates() {
@@ -4930,39 +5087,22 @@ function removeTooltip() {
   }
   
   async function checkForUpdates(force = false) {
-    if (!force && !shouldCheckForUpdates()) {
- //     console.log('Utilify Update Check: Skipped (checked recently)');
-      return;
+    try {
+      if (!force && !shouldCheckForUpdates()) return;
+      
+      const currentVersion = getInstalledVersion();
+      if (!currentVersion) return;
+      
+      const remoteVersion = await fetchRemoteVersion();
+      if (!remoteVersion) return;
+      
+      const comparison = compareVersions(currentVersion, remoteVersion);
+      if (comparison > 0) showUpdateNotification(currentVersion, remoteVersion);
+      
+      updateLastCheckTime();
+    } catch {
+      // swallow — update check is non-critical, never crash the page over it
     }
-    
-//    console.log('Utilify Update Check: Starting...');
-    
-    const currentVersion = getInstalledVersion();
-    if (!currentVersion) {
- //     console.log('Utilify Update Check: Cannot determine installed version');
-      return;
-    }
-    
-    const remoteVersion = await fetchRemoteVersion();
-    if (!remoteVersion) {
- //     console.log('Utilify Update Check: Failed to fetch remote version');
-      return;
-    }
-    
-//    console.log(`Utilify Update Check: Current v${currentVersion}, Remote v${remoteVersion}`);
-    
-    const comparison = compareVersions(currentVersion, remoteVersion);
-    
-    if (comparison > 0) {
-//      console.log('Utilify Update Check: Update available!');
-      showUpdateNotification(currentVersion, remoteVersion);
-    } else if (comparison === 0) {
- //     console.log('Utilify Update Check: Up to date ✓');
-    } else {
-  //    console.log('Utilify Update Check: Local version is newer (dev build?)');
-    }
-    
-    updateLastCheckTime();
   }
 
   // Expose API for manual checks
@@ -4982,6 +5122,9 @@ function removeTooltip() {
   function init() {
     injectStyles();
     setTimeout(() => checkForUpdates(), 3000);
+
+    // DEBUG NOTIF
+    // setTimeout(() => showUpdateNotification('3.1.0', '3.2.0'), 500);
   }
 
   if (document.readyState === 'loading') {
@@ -6842,7 +6985,7 @@ bootstrap();
   const TOOLTIP_MIN      = 80;
   const TOOLTIP_MAX      = 640;
   const TOOLTIP_STEP     = 32;               // px per scroll tick
-  const HOVER_DELAY_MS   = 120;              // ms before tooltip appears
+  const HOVER_DELAY_MS   = 280;              // ms before tooltip appears — longer = fewer accidental triggers
   const IMGUR_RE = /https?:\/\/(?:i(?:%2E|\.)imgur(?:%2E|\.)com\/([A-Za-z0-9]+(?:%2E|\.)[a-zA-Z]{2,5})|imgur(?:%2E|\.)com\/([A-Za-z0-9]+))/gi;
   function normaliseImgurUrl(raw) {
     const decoded = raw.replace(/%2E/gi, '.').replace(/%2F/gi, '/');
@@ -7087,47 +7230,100 @@ bootstrap();
 
   let lastMx = 0, lastMy = 0;
 
+  // Selectors that are "safe contexts" where we're confident the user is
+  // looking at a real rendered URL, not a chat preview blurb or ambient text.
+  // We only trigger if the hovered element (or its direct <a> parent) matches.
+  const SAFE_CONTEXTS = [
+    // Explicitly linkified by us
+    'a.__piu-link',
+    // KoGaMa wall post / comment text containers
+    '._3Wsxf', '._1aUa_', '.css-1hitfzb',
+    // Feed items
+    '.feed-text',
+    // DM full chat view — the actual message bubble, NOT the compact preview row
+    '._375XK ._2XaOw ._1j2Cd p',
+  ];
+
+  // Returns an imgur URL only when el is something the user is deliberately
+  // hovering — an <a> whose href is an imgur link, or a text node that IS
+  // directly inside a known safe container.
   function imgurUrlFromElement(el) {
+    if (!el || el === tipEl || (tipEl && tipEl.contains(el))) return null;
+
+    // Case 1: it's an <a> tag — check href only, no textContent fishing
     if (el.tagName === 'A') {
       const href = el.getAttribute('href') || '';
-      const u = extractImgurUrl(decodeURIComponent(href));
-      if (u) return u;
+      return extractImgurUrl(decodeURIComponent(href));
     }
-    const text = el.textContent || '';
-    if (text.length < 500) {
-      const u = extractImgurUrl(text);
-      if (u) return u;
+
+    // Case 2: it's a linkified anchor we injected
+    if (el.classList?.contains('__piu-link')) {
+      const href = el.getAttribute('href') || '';
+      return extractImgurUrl(decodeURIComponent(href));
+    }
+
+    // Case 3: plain text node inside a known safe container — only match if
+    // the element itself (not a distant ancestor) is directly the container.
+    // This prevents chat-list preview rows from matching.
+    const directText = el.textContent || '';
+    if (directText.length > 0 && directText.length < 300) {
+      const isSafeEl = SAFE_CONTEXTS.some(sel => {
+        try { return el.matches(sel); } catch { return false; }
+      });
+      if (isSafeEl) return extractImgurUrl(directText);
+    }
+
+    return null;
+  }
+
+  // Walk up a small number of ancestors but stop the moment we leave an <a>
+  // or a __piu-link. For plain text we do NOT walk up — proximity is intentional.
+  function findImgurFromTarget(target) {
+    if (!target || target === document.body) return null;
+
+    // Check the element itself
+    let url = imgurUrlFromElement(target);
+    if (url) return url;
+
+    // Only walk up if we started inside an anchor subtree
+    let node = target.parentElement;
+    for (let i = 0; i < 3 && node && node !== document.body; i++, node = node.parentElement) {
+      if (node.tagName === 'A' || node.classList?.contains('__piu-link')) {
+        url = imgurUrlFromElement(node);
+        if (url) return url;
+      }
+      // Stop climbing if we hit a DM preview row or chat list — never show
+      // the tooltip from within compact preview containers
+      if (node.matches?.('._3DYYr, ._1lvYU, ._1taAL, .uwn5j')) return null;
     }
     return null;
   }
 
   document.addEventListener('mousemove', e => {
     lastMx = e.clientX; lastMy = e.clientY;
+
+    // Never re-trigger from inside the tooltip itself
+    if (tipEl && tipEl.contains(e.target)) {
+      clearTimeout(hideTimer);
+      return;
+    }
+
     clearTimeout(showTimer);
 
-    let found = null;
-    let node  = e.target;
-    for (let i = 0; i < 5 && node && node !== document.body; i++, node = node.parentElement) {
-      found = imgurUrlFromElement(node);
-      if (found) break;
-    }
+    const found = findImgurFromTarget(e.target);
 
     if (found) {
       showTimer = setTimeout(() => showTip(found, lastMx, lastMy), HOVER_DELAY_MS);
     } else {
-      clearTimeout(showTimer);
       if (tipVisible) hideTip();
     }
   }, true);
 
-  document.addEventListener('mousemove', e => {
-    if (tipVisible && tipEl && tipEl.contains(e.target)) {
-      clearTimeout(hideTimer);
-    }
-  });
-
   function linkifyNode(node) {
     if (node.nodeType !== Node.TEXT_NODE) return;
+    // Guard: node may have been detached by React between collection and execution
+    if (!node.parentNode || !document.contains(node.parentNode)) return;
+
     const text = node.textContent;
     IMGUR_RE.lastIndex = 0;
     if (!IMGUR_RE.test(text)) return;
@@ -7146,11 +7342,19 @@ bootstrap();
       last = m.index + m[0].length;
     }
     if (last < text.length) frag.appendChild(document.createTextNode(text.slice(last)));
-    node.parentNode.replaceChild(frag, node);
+
+    // Final liveness check — React may have detached the node while we built the fragment
+    if (!node.parentNode || !document.contains(node.parentNode)) return;
+    try {
+      node.parentNode.replaceChild(frag, node);
+    } catch {
+      // Node became detached between the check above and the actual replace — safe to ignore
+    }
   }
 
   function linkifySubtree(root) {
     if (!root || root.nodeType !== Node.ELEMENT_NODE) return;
+    if (!document.contains(root)) return;
     const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, {
       acceptNode(node) {
         const p = node.parentElement;
@@ -7168,12 +7372,26 @@ bootstrap();
 
   linkifySubtree(document.body);
 
+  // Debounced: do NOT call linkify synchronously inside a MutationObserver callback —
+  // that fires during React's reconciliation and calling replaceChild mid-reconcile
+  // corrupts the fiber tree, causing the full-page DOM wipe seen in the console.
+  let _linkifyTimer = null;
+  const _linkifyQueue = new Set();
+
   new MutationObserver(muts => {
     for (const mut of muts)
       for (const node of mut.addedNodes) {
+        _linkifyQueue.add(node);
+      }
+    clearTimeout(_linkifyTimer);
+    _linkifyTimer = setTimeout(() => {
+      const queued = Array.from(_linkifyQueue);
+      _linkifyQueue.clear();
+      for (const node of queued) {
         if (node.nodeType === Node.ELEMENT_NODE) linkifySubtree(node);
         else if (node.nodeType === Node.TEXT_NODE) linkifyNode(node);
       }
+    }, 60);
   }).observe(document.body, { childList: true, subtree: true });
 
   function formatURL(url) {
@@ -7383,7 +7601,12 @@ bootstrap();
             }
 
             const refNode = container.children[1] || null;
-            container.insertBefore(wrapper, refNode);
+            if (refNode && refNode.parentNode !== container) return false; // stale ref
+            try {
+              container.insertBefore(wrapper, refNode);
+            } catch {
+              try { container.appendChild(wrapper); } catch {}
+            }
             return true;
         }
 
@@ -7414,17 +7637,6 @@ bootstrap();
     }
 
 })();
-
-// ==UserScript==
-// @name         KoGaMa Profile Bookmarks
-// @namespace    https://www.kogama.com/
-// @version      4.0.0
-// @description  Bookmark profiles, quick-access from the friends bar
-// @author       Lappy
-// @match        *://www.kogama.com/*
-// @grant        none
-// @run-at       document-idle
-// ==/UserScript==
 
 (function () {
   'use strict';
@@ -7459,12 +7671,6 @@ bootstrap();
       return window.App && window.App.options && window.App.options.bootstrap && window.App.options.bootstrap.object;
     } catch {}
     return null;
-  }
-
-  function isViewingOwnProfile() {
-    const obj = getBootstrapObject();
-    if (!obj) return false;
-    return obj.is_me === true;
   }
 
   function getBookmarks() {
@@ -7885,7 +8091,14 @@ bootstrap();
     const h1 = document.querySelector('h1');
     if (!container || !h1) return;
     const nickname = h1.textContent.trim();
-    container.insertBefore(buildBookmarkButton(uid, nickname), container.firstChild);
+    const bm = buildBookmarkButton(uid, nickname);
+    const refNode = container.firstChild || null;
+    if (refNode && refNode.parentNode !== container) return; // stale ref, bail
+    try {
+      container.insertBefore(bm, refNode);
+    } catch {
+      try { container.appendChild(bm); } catch {}
+    }
   }
 
   let profileBtnDone = false;
@@ -7902,21 +8115,21 @@ bootstrap();
       }
     }
 
-    if (isProfilePage() && !profileBtnDone) {
-      const obj = getBootstrapObject();
-      if (!obj) return;
+    if (!isProfilePage() || profileBtnDone) return;
 
-      if (obj.is_me === true) {
-        profileBtnDone = true;
-        return;
-      }
+    const obj = getBootstrapObject();
+    if (!obj) return;
 
-      const container = document.querySelector('._1Noq6');
-      const h1 = document.querySelector('h1');
-      if (container && h1) {
-        injectBookmarkButton();
-        profileBtnDone = true;
-      }
+    if (obj.is_me === true) {
+      profileBtnDone = true;
+      return;
+    }
+
+    const container = document.querySelector('._1Noq6');
+    const h1 = document.querySelector('h1');
+    if (container && h1) {
+      injectBookmarkButton();
+      profileBtnDone = true;
     }
   }
 
