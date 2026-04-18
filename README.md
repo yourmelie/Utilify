@@ -22,7 +22,7 @@ Utilify served as a comprehensive userscript suite for KoGaMa, bundling visual r
 
 **Recommended manager:** ScriptCat or Tampermonkey.
 
-[Install Utilify v3.2.0](https://github.com/lappisu/Utilify/raw/refs/heads/main/Script/Rewrite/Utilify.user.js)
+[Install Utilify v3.2.0](https://raw.githubusercontent.com/yourmelie/Utilify/refs/heads/main/Script/Depracated/UtilifyV3.js)
 
 ## Core Capabilities (Abridged)
 
