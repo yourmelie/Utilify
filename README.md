@@ -11,7 +11,7 @@ Files are provided only on [GitHub](https://github.com/yourmelie/FormerlyUtilify
 - **Feed manager** -- review profile posts and comments
 - **Faster friends** -- fast-loading friends panel with search and mutual friend visibility
 - **Restored invite friend button** -- back on profiles where it belongs
-- **Playing type chip** -- shows what someone is currently playing
+- **Playing type chip** 
 - **Paste and dot obfuscation** -- re-enabled where it was stripped
 - **Hide activity** -- always on
 - **Spy friends' activity** -- always on
